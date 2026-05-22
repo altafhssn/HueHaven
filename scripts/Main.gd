@@ -9,12 +9,17 @@ var BallColorsScript = preload("res://scripts/BallColors.gd")
 var LevelGeneratorScript = preload("res://scripts/LevelGenerator.gd")
 var ProgressionScript = preload("res://scripts/Progression.gd")
 var LevelSelectScript = preload("res://scripts/LevelSelect.gd")
+const StyleScript = preload("res://scripts/Style.gd")
 
 var game_state = null
 var tube_grid = null
 var hud = null
+var main_menu = null
 var level_select = null
+var settings_screen = null
 var progression = null
+
+var screen_state: String = "menu"  # "menu" | "select" | "settings" | "game"
 
 var selected_tube: int = -1
 var selected_ball_lift: float = 0.0
@@ -66,37 +71,67 @@ func _ready():
 	add_child(hud)
 	hud.main_ref = self
 	hud.visible = false  # Hide HUD until game starts
-	
-	# Start with level select
-	_show_level_select()
 
-func _show_level_select():
-	is_showing_level_select = true
-	win_shown = false
-	
-	# Hide game HUD
-	if hud:
-		hud.visible = false
-	
-	# Remove old level select if exists
+	# Boot into main menu
+	show_main_menu()
+
+func _clear_screens():
+	if main_menu and is_instance_valid(main_menu):
+		main_menu.queue_free()
+		main_menu = null
 	if level_select and is_instance_valid(level_select):
 		level_select.queue_free()
-	
-	# Create new level select
+		level_select = null
+	if settings_screen and is_instance_valid(settings_screen):
+		settings_screen.queue_free()
+		settings_screen = null
+
+func show_main_menu():
+	screen_state = "menu"
+	is_showing_level_select = true
+	win_shown = false
+	if hud: hud.visible = false
+	_clear_screens()
+	var MM = preload("res://scripts/MainMenu.gd")
+	main_menu = MM.new()
+	main_menu.main_ref = self
+	add_child(main_menu)
+	queue_redraw()
+
+func show_level_select():
+	screen_state = "select"
+	is_showing_level_select = true
+	win_shown = false
+	if hud: hud.visible = false
+	_clear_screens()
 	var LSClass = preload("res://scripts/LevelSelect.gd")
 	level_select = LSClass.new()
 	level_select.main_ref = self
 	add_child(level_select)
+	queue_redraw()
+
+func show_settings():
+	screen_state = "settings"
+	is_showing_level_select = true
+	if hud: hud.visible = false
+	_clear_screens()
+	var SS = preload("res://scripts/SettingsScreen.gd")
+	settings_screen = SS.new()
+	settings_screen.main_ref = self
+	add_child(settings_screen)
+	queue_redraw()
+
+# Legacy alias retained for HUD/older callers
+func _show_level_select():
+	show_level_select()
 
 func start_level(level_idx: int):
+	screen_state = "game"
 	is_showing_level_select = false
 	is_using_generated_levels = true
 	win_shown = false
-	
-	# Remove level select
-	if level_select and is_instance_valid(level_select):
-		level_select.queue_free()
-		level_select = null
+
+	_clear_screens()
 	
 	# Show HUD
 	if hud:
@@ -156,9 +191,10 @@ func _draw():
 	var n_tubes = tubes.size()
 	var capacity = level_data.capacity
 	
-	# Draw background
-	draw_rect(Rect2(Vector2.ZERO, viewport_size), Color("#0D0D1A"))
-	
+	# Atmospheric background
+	StyleScript.draw_background(self, viewport_size)
+	StyleScript.draw_stars(self, viewport_size, 11)
+
 	# Draw each tube
 	for i in range(n_tubes):
 		# Shake offset: oscillates and fades as timer expires
@@ -168,19 +204,30 @@ func _draw():
 			shake_x = sin(t * 60.0) * 8.0 * min(t / 0.3, 1.0)
 		var tube_x = grid_offset.x + i * (tube_width + _tube_gap) + shake_x
 		var tube_rect = Rect2(tube_x, grid_offset.y, tube_width, tube_height)
-		
-		# Tube background
-		var bg_color = Color("#1A1A2E")
+
+		# Tube body — gradient with subtle inner shadow
+		var bg_top = StyleScript.TUBE_BG_HI
+		var bg_bot = StyleScript.TUBE_BG
 		if selected_tube == i:
-			bg_color = Color("#2A2A4E")
-		
-		# Tube shape (rounded rectangle)
-		draw_rounded_rect(tube_rect, bg_color, 6)
-		draw_rounded_rect(tube_rect, Color("#2A2A4E"), 6, false, 1.5)
-		
+			bg_top = Color("#2e2e5a")
+			bg_bot = Color("#1c1c38")
+		StyleScript.draw_gradient_rect(self, tube_rect, bg_top, bg_bot, 10.0)
+		# Inner top highlight (glass effect)
+		draw_rect(Rect2(tube_rect.position + Vector2(2, 2), Vector2(tube_rect.size.x - 4, 4)),
+			Color(1, 1, 1, 0.05))
+		# Inner bottom shadow
+		draw_rect(Rect2(tube_rect.position + Vector2(2, tube_rect.size.y - 6), Vector2(tube_rect.size.x - 4, 4)),
+			StyleScript.TUBE_INNER_SHADOW)
+		# Outline
+		var border_col = StyleScript.TUBE_BORDER
 		if selected_tube == i:
-			var glow_rect = tube_rect.grow(3)
-			draw_rounded_rect(glow_rect, Color("#e8d5a3"), 8, false, 1.0)
+			border_col = StyleScript.ACCENT
+		draw_rounded_rect(tube_rect, border_col, 10, false, 1.5)
+
+		if selected_tube == i:
+			# Outer glow ring
+			var glow_rect = tube_rect.grow(4)
+			draw_rounded_rect(glow_rect, Color("#e8d5a3", 0.4), 12, false, 2.0)
 		
 		# Draw balls in tube (bottom to top)
 		var tube_contents = tubes[i]
@@ -622,10 +669,10 @@ func next_level():
 		_load_generated_level(next_idx)
 	else:
 		# Back to level select
-		_show_level_select()
+		show_level_select()
 
 func back_to_menu():
-	_show_level_select()
+	show_level_select()
 
 func get_current_level() -> int:
 	return current_level_idx
