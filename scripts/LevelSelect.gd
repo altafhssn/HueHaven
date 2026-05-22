@@ -55,13 +55,13 @@ func _ready():
 	_refresh_tab_styles()
 
 func _build_pack_tabs(viewport: Vector2):
-	var packs = LevelGeneratorScript.get_packs()
-	var n = packs.size()
-	var pad := 16.0
-	var available := viewport.x - pad * 2
-	var gap := 6.0
-	var tab_w := (available - gap * (n - 1)) / n
-	var y := 80.0
+	var packs: Array = LevelGeneratorScript.get_packs()
+	var n: int = packs.size()
+	var pad: float = 16.0
+	var available: float = viewport.x - pad * 2.0
+	var gap: float = 6.0
+	var tab_w: float = (available - gap * float(n - 1)) / float(n)
+	var y: float = 80.0
 	for i in range(n):
 		var tab := Button.new()
 		tab.text = packs[i].name

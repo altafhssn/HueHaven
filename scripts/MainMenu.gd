@@ -41,8 +41,8 @@ func _ready():
 	add_child(settings_btn)
 
 	# Stats text
-	var total_stars := 0
-	var unlocked := progression.get_highest_unlocked()
+	var total_stars: int = 0
+	var unlocked: int = progression.get_highest_unlocked()
 	for i in range(unlocked + 1):
 		total_stars += progression.get_stars(i)
 	var stats_lbl := StyleScript.make_label(
@@ -87,13 +87,13 @@ func _draw_title(viewport: Vector2):
 
 func _draw_hero_tubes(viewport: Vector2):
 	# Three sample tubes with sample stacks — drift gently
-	var tube_w := 44.0
-	var tube_h := 130.0
-	var gap := 18.0
-	var n := 3
-	var total := n * tube_w + (n - 1) * gap
-	var start_x := viewport.x * 0.5 - total * 0.5
-	var top := viewport.y * 0.08
+	var tube_w: float = 44.0
+	var tube_h: float = 130.0
+	var gap: float = 18.0
+	var n: int = 3
+	var total: float = float(n) * tube_w + float(n - 1) * gap
+	var start_x: float = viewport.x * 0.5 - total * 0.5
+	var top: float = viewport.y * 0.08
 	var samples = [
 		[0, 0, 1, 2],   # mixed
 		[1, 1, 1, 0],   # mostly sorted
@@ -116,9 +116,9 @@ func _draw_tube_shape(rect: Rect2, ball_r: float, balls: Array):
 	draw_rect(hi_rect, Color(1, 1, 1, 0.06))
 	# Balls bottom-up
 	for j in range(balls.size()):
-		var color := BallColorsScript.get_color(balls[j])
-		var cx := rect.position.x + rect.size.x * 0.5
-		var cy := rect.position.y + rect.size.y - (j + 0.5) * (ball_r * 2 + 1)
+		var color: Color = BallColorsScript.get_color(balls[j])
+		var cx: float = rect.position.x + rect.size.x * 0.5
+		var cy: float = rect.position.y + rect.size.y - (j + 0.5) * (ball_r * 2 + 1)
 		draw_circle(Vector2(cx + 2, cy + 2), ball_r, Color(0, 0, 0, 0.3))
 		draw_circle(Vector2(cx, cy), ball_r, color)
 		draw_circle(Vector2(cx - ball_r * 0.3, cy - ball_r * 0.3), ball_r * 0.35, Color(1, 1, 1, 0.28))
