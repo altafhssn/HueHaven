@@ -1,0 +1,115 @@
+extends Control
+
+# Full-screen settings page.
+
+const StyleScript = preload("res://scripts/Style.gd")
+const ProgressionScript = preload("res://scripts/Progression.gd")
+
+var main_ref = null
+var progression = null
+var cb_btn = null
+var mute_btn = null
+var reset_btn = null
+
+func _ready():
+	progression = ProgressionScript.new()
+	var viewport: Vector2 = get_viewport().get_visible_rect().size
+	size = viewport
+	mouse_filter = Control.MOUSE_FILTER_PASS
+
+	# Back button (top-left)
+	var back := Button.new()
+	back.text = "←"
+	back.add_theme_font_size_override("font_size", 22)
+	StyleScript.style_button(back, false)
+	back.size = Vector2(48, 48)
+	back.position = Vector2(16, 16)
+	back.pressed.connect(_on_back)
+	back.focus_mode = Control.FOCUS_NONE
+	add_child(back)
+
+	# Title
+	add_child(StyleScript.make_label("Settings", 28, StyleScript.ACCENT,
+		Vector2(0, 40), Vector2(viewport.x, 40)))
+
+	# Group label "Game"
+	add_child(StyleScript.make_label("GAME", 11, StyleScript.TEXT_DIM,
+		Vector2(24, viewport.y * 0.20), Vector2(viewport.x - 48, 18),
+		HORIZONTAL_ALIGNMENT_LEFT))
+
+	# Colorblind toggle row
+	cb_btn = _make_row("Colorblind shapes", _on_toggle_cb,
+		Vector2(24, viewport.y * 0.20 + 24), viewport.x - 48)
+	add_child(cb_btn)
+
+	# Mute toggle row
+	mute_btn = _make_row("Sound", _on_toggle_mute,
+		Vector2(24, viewport.y * 0.20 + 84), viewport.x - 48)
+	add_child(mute_btn)
+
+	# Group label "Data"
+	add_child(StyleScript.make_label("DATA", 11, StyleScript.TEXT_DIM,
+		Vector2(24, viewport.y * 0.20 + 170), Vector2(viewport.x - 48, 18),
+		HORIZONTAL_ALIGNMENT_LEFT))
+
+	# Reset progress button
+	reset_btn = Button.new()
+	reset_btn.text = "Reset progress"
+	reset_btn.add_theme_font_size_override("font_size", 14)
+	StyleScript.style_button(reset_btn, false)
+	reset_btn.add_theme_color_override("font_color", StyleScript.DANGER)
+	reset_btn.size = Vector2(viewport.x - 48, 48)
+	reset_btn.position = Vector2(24, viewport.y * 0.20 + 194)
+	reset_btn.pressed.connect(_on_reset)
+	reset_btn.focus_mode = Control.FOCUS_NONE
+	add_child(reset_btn)
+
+	# Version footer
+	add_child(StyleScript.make_label("v0.2 — HueHaven", 11, StyleScript.TEXT_DIM,
+		Vector2(0, viewport.y - 30), Vector2(viewport.x, 20)))
+
+	_refresh()
+
+func _make_row(label_text: String, callback: Callable, pos: Vector2, w: float) -> Button:
+	# A row-shaped button that shows "Label    [ON/OFF]"
+	var b := Button.new()
+	b.add_theme_font_size_override("font_size", 14)
+	StyleScript.style_button(b, false)
+	b.size = Vector2(w, 48)
+	b.position = pos
+	b.pressed.connect(callback)
+	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	b.text = label_text
+	b.focus_mode = Control.FOCUS_NONE
+	return b
+
+func _refresh():
+	cb_btn.text = "  Colorblind shapes" + _suffix(progression.is_colorblind())
+	mute_btn.text = "  Sound" + _suffix(not progression.is_muted())
+
+func _suffix(on: bool) -> String:
+	return "                                   ON " if on else "                                   OFF"
+
+func _on_toggle_cb():
+	if main_ref:
+		main_ref.toggle_colorblind()
+	_refresh()
+
+func _on_toggle_mute():
+	if main_ref:
+		main_ref.toggle_mute()
+	_refresh()
+
+func _on_reset():
+	if progression:
+		progression.reset_all()
+	_refresh()
+
+func _on_back():
+	if main_ref:
+		main_ref.show_main_menu()
+
+func _draw():
+	var viewport = get_viewport().get_visible_rect().size
+	StyleScript.draw_background(self, viewport)
+	StyleScript.draw_stars(self, viewport, 3)

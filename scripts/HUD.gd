@@ -2,6 +2,8 @@ extends CanvasLayer
 
 # HUD — move counter, undo button, hint button, restart, win overlay
 
+const StyleScript = preload("res://scripts/Style.gd")
+
 var main_ref = null
 
 var move_label = null
@@ -29,6 +31,10 @@ var cb_button = null
 var mute_button = null
 var close_settings_button = null
 
+var win_card: Panel = null
+var stuck_card: Panel = null
+var settings_card: Panel = null
+
 var ACCENT = Color("#e8d5a3")
 var BG = Color("#0D0D1A")
 
@@ -36,151 +42,207 @@ func _ready():
 	_setup_hud()
 
 func _setup_hud():
-	# Level name label
+	var vp: Vector2 = get_viewport().get_visible_rect().size
+
+	# Level name (centered, top)
 	level_name_label = Label.new()
 	level_name_label.name = "LevelNameLabel"
-	level_name_label.add_theme_font_size_override("font_size", 14)
-	level_name_label.add_theme_color_override("font_color", Color("#e8d5a3"))
+	level_name_label.add_theme_font_size_override("font_size", 16)
+	level_name_label.add_theme_color_override("font_color", StyleScript.ACCENT)
 	level_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	level_name_label.position = Vector2(0, 110)
-	level_name_label.size = Vector2(480, 24)
+	level_name_label.position = Vector2(0, 22)
+	level_name_label.size = Vector2(vp.x, 22)
 	add_child(level_name_label)
-	
-	# Move counter
+
+	# Move counter (centered, just under level name)
 	move_label = Label.new()
-	move_label.text = "Moves: 0"
-	move_label.add_theme_font_size_override("font_size", 14)
-	move_label.add_theme_color_override("font_color", Color("#888888"))
-	move_label.position = Vector2(16, 16)
+	move_label.text = "0 moves"
+	move_label.add_theme_font_size_override("font_size", 12)
+	move_label.add_theme_color_override("font_color", StyleScript.TEXT_MUTED)
+	move_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	move_label.position = Vector2(0, 48)
+	move_label.size = Vector2(vp.x, 18)
 	add_child(move_label)
-	
-	# Undo button
-	undo_button = _make_button("↩ Undo", Vector2(16, 44), _on_undo)
+
+	# Menu button (top-left)
+	menu_button = _make_icon_button("←", Vector2(12, 16), 40, _on_menu)
+	add_child(menu_button)
+
+	# Settings button (top-right)
+	settings_button = _make_icon_button("⚙", Vector2(vp.x - 52, 16), 40, _on_open_settings)
+	add_child(settings_button)
+
+	# Bottom toolbar (Undo / Restart / Hint)
+	var toolbar_y = vp.y - 76
+	var btn_w = 100.0
+	var gap = 12.0
+	var total = btn_w * 3 + gap * 2
+	var start_x = (vp.x - total) / 2
+	undo_button = _make_text_button("↺  Undo", Vector2(start_x, toolbar_y), btn_w, 48, _on_undo)
 	add_child(undo_button)
-	
-	# Restart button
-	restart_button = _make_button("↻ Restart", Vector2(120, 44), _on_restart)
+	hint_button = _make_text_button("?  Hint", Vector2(start_x + btn_w + gap, toolbar_y), btn_w, 48, _on_hint)
+	add_child(hint_button)
+	restart_button = _make_text_button("↻  Restart", Vector2(start_x + (btn_w + gap) * 2, toolbar_y), btn_w, 48, _on_restart)
 	add_child(restart_button)
 	
-	# Hint button (placeholder)
-	hint_button = _make_button("? Hint", Vector2(240, 44), _on_hint)
-	add_child(hint_button)
-	
-	# Menu button
-	menu_button = _make_button("☰ Menu", Vector2(360, 44), _on_menu)
-	add_child(menu_button)
-	
-	# Win overlay (hidden initially)
+	# --- Win overlay: dim + centered card ---
 	win_overlay = ColorRect.new()
 	win_overlay.color = Color(0, 0, 0, 0)
-	win_overlay.size = get_viewport().get_visible_rect().size
+	win_overlay.size = vp
 	win_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	win_overlay.visible = false
 	add_child(win_overlay)
-	
-	# Win title label
+
+	var card_w := 320.0
+	var card_h := 290.0
+	var card_x := (vp.x - card_w) / 2
+	var card_y := (vp.y - card_h) / 2
+
+	win_card = Panel.new()
+	win_card.position = Vector2(card_x, card_y)
+	win_card.size = Vector2(card_w, card_h)
+	win_card.add_theme_stylebox_override("panel", _card_style())
+	win_card.visible = false
+	win_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(win_card)
+
 	win_label = Label.new()
-	win_label.add_theme_font_size_override("font_size", 28)
-	win_label.add_theme_color_override("font_color", ACCENT)
+	win_label.add_theme_font_size_override("font_size", 24)
+	win_label.add_theme_color_override("font_color", StyleScript.ACCENT)
 	win_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	win_label.position = Vector2(card_x, card_y + 28)
+	win_label.size = Vector2(card_w, 32)
 	win_label.visible = false
 	add_child(win_label)
-	
-	# Stars label
+
 	stars_label = Label.new()
-	stars_label.add_theme_font_size_override("font_size", 40)
-	stars_label.add_theme_color_override("font_color", Color("#FFD700"))
+	stars_label.add_theme_font_size_override("font_size", 44)
+	stars_label.add_theme_color_override("font_color", StyleScript.STAR)
 	stars_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	stars_label.position = Vector2(card_x, card_y + 80)
+	stars_label.size = Vector2(card_w, 56)
 	stars_label.visible = false
 	add_child(stars_label)
-	
-	# Next level button
-	next_button = _make_button("Next →", Vector2(180, 520), _on_next)
+
+	next_button = _make_text_button("Next →", Vector2(card_x + 30, card_y + 200), card_w - 60, 44, _on_next)
+	next_button.add_theme_font_size_override("font_size", 16)
+	StyleScript.style_button(next_button, true)
 	next_button.visible = false
 	add_child(next_button)
-	
-	# Menu from win button
-	menu_from_win = _make_button("Level Select", Vector2(180, 560), _on_menu)
+
+	menu_from_win = _make_text_button("Level Select", Vector2(card_x + 30, card_y + 200 + 50), card_w - 60, 36, _on_menu)
+	menu_from_win.add_theme_color_override("font_color", StyleScript.TEXT_MUTED)
 	menu_from_win.visible = false
 	add_child(menu_from_win)
 
-	# Settings button (gear)
-	settings_button = _make_button("⚙", Vector2(440, 16), _on_open_settings)
-	settings_button.size = Vector2(28, 28)
-	add_child(settings_button)
-
-	# Stuck overlay
+	# --- Stuck overlay: dim + centered card ---
 	stuck_overlay = ColorRect.new()
 	stuck_overlay.color = Color(0, 0, 0, 0)
-	stuck_overlay.size = get_viewport().get_visible_rect().size
+	stuck_overlay.size = vp
 	stuck_overlay.visible = false
 	stuck_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(stuck_overlay)
 
+	var sc_w := 300.0
+	var sc_h := 140.0
+	stuck_card = Panel.new()
+	stuck_card.position = Vector2((vp.x - sc_w) / 2, vp.y * 0.42 - 22)
+	stuck_card.size = Vector2(sc_w, sc_h)
+	stuck_card.add_theme_stylebox_override("panel", _card_style())
+	stuck_card.visible = false
+	stuck_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(stuck_card)
+
 	stuck_label = Label.new()
-	stuck_label.add_theme_font_size_override("font_size", 22)
-	stuck_label.add_theme_color_override("font_color", Color("#ff8888"))
+	stuck_label.add_theme_font_size_override("font_size", 20)
+	stuck_label.add_theme_color_override("font_color", StyleScript.DANGER)
 	stuck_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	stuck_label.text = "No moves left!"
-	stuck_label.position = Vector2(0, 420)
-	stuck_label.size = Vector2(480, 30)
+	stuck_label.text = "No moves left"
+	stuck_label.position = Vector2(0, vp.y * 0.42)
+	stuck_label.size = Vector2(vp.x, 28)
 	stuck_label.visible = false
 	add_child(stuck_label)
 
-	stuck_undo_button = _make_button("↩ Undo", Vector2(120, 460), _on_undo)
+	stuck_undo_button = _make_text_button("↺  Undo", Vector2(vp.x / 2 - 120, vp.y * 0.42 + 50), 110, 44, _on_undo)
 	stuck_undo_button.visible = false
 	add_child(stuck_undo_button)
 
-	stuck_restart_button = _make_button("↻ Restart", Vector2(260, 460), _on_restart)
+	stuck_restart_button = _make_text_button("↻  Restart", Vector2(vp.x / 2 + 10, vp.y * 0.42 + 50), 110, 44, _on_restart)
 	stuck_restart_button.visible = false
 	add_child(stuck_restart_button)
 
-	# Settings overlay
+	# --- Settings modal: dim + centered card ---
 	settings_overlay = ColorRect.new()
 	settings_overlay.color = Color(0, 0, 0, 0)
-	settings_overlay.size = get_viewport().get_visible_rect().size
+	settings_overlay.size = vp
 	settings_overlay.visible = false
 	settings_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(settings_overlay)
 
-	cb_button = _make_button("", Vector2(140, 350), _on_toggle_colorblind)
-	cb_button.size = Vector2(200, 32)
+	var stg_w := 320.0
+	var stg_h := 240.0
+	var sx := (vp.x - 280) / 2
+	var sy := (vp.y - 220) / 2
+
+	settings_card = Panel.new()
+	settings_card.position = Vector2((vp.x - stg_w) / 2, (vp.y - stg_h) / 2)
+	settings_card.size = Vector2(stg_w, stg_h)
+	settings_card.add_theme_stylebox_override("panel", _card_style())
+	settings_card.visible = false
+	settings_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(settings_card)
+	cb_button = _make_text_button("", Vector2(sx, sy + 40), 280, 44, _on_toggle_colorblind)
+	cb_button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	cb_button.visible = false
 	add_child(cb_button)
 
-	mute_button = _make_button("", Vector2(140, 390), _on_toggle_mute)
-	mute_button.size = Vector2(200, 32)
+	mute_button = _make_text_button("", Vector2(sx, sy + 92), 280, 44, _on_toggle_mute)
+	mute_button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	mute_button.visible = false
 	add_child(mute_button)
 
-	close_settings_button = _make_button("Close", Vector2(180, 440), _on_close_settings)
-	close_settings_button.size = Vector2(120, 32)
+	close_settings_button = _make_text_button("Close", Vector2(sx + 60, sy + 158), 160, 40, _on_close_settings)
 	close_settings_button.visible = false
 	add_child(close_settings_button)
 
-func _make_button(text: String, pos: Vector2, callback: Callable):
-	var btn = Button.new()
+func _card_style() -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = StyleScript.PANEL
+	sb.border_color = StyleScript.ACCENT_DIM
+	sb.set_border_width_all(1)
+	sb.corner_radius_top_left = 14
+	sb.corner_radius_top_right = 14
+	sb.corner_radius_bottom_left = 14
+	sb.corner_radius_bottom_right = 14
+	sb.shadow_color = Color(0, 0, 0, 0.4)
+	sb.shadow_size = 12
+	return sb
+
+func _make_text_button(text: String, pos: Vector2, w: float, h: float, callback: Callable) -> Button:
+	var btn := Button.new()
 	btn.text = text
 	btn.position = pos
-	btn.add_theme_font_size_override("font_size", 12)
-	btn.add_theme_color_override("font_color", ACCENT)
-	btn.add_theme_stylebox_override("normal", _make_style())
-	btn.add_theme_stylebox_override("hover", _make_style(Color("#2A2A4E")))
-	btn.add_theme_stylebox_override("pressed", _make_style(Color("#1A1A2E")))
+	btn.size = Vector2(w, h)
+	btn.add_theme_font_size_override("font_size", 14)
+	StyleScript.style_button(btn, false)
 	btn.pressed.connect(callback)
-	btn.size = Vector2(90, 28)
+	btn.focus_mode = Control.FOCUS_NONE
 	return btn
 
-func _make_style(bg := Color("#1A1A2E")) -> StyleBox:
-	var sb = StyleBoxFlat.new()
-	sb.bg_color = bg
-	sb.set_border_width_all(1)
-	sb.border_color = Color("#2A2A4E")
-	sb.corner_radius_top_left = 4
-	sb.corner_radius_top_right = 4
-	sb.corner_radius_bottom_right = 4
-	sb.corner_radius_bottom_left = 4
-	return sb
+func _make_icon_button(text: String, pos: Vector2, sz: float, callback: Callable) -> Button:
+	var btn := Button.new()
+	btn.text = text
+	btn.position = pos
+	btn.size = Vector2(sz, sz)
+	btn.add_theme_font_size_override("font_size", 20)
+	StyleScript.style_button(btn, false)
+	btn.pressed.connect(callback)
+	btn.focus_mode = Control.FOCUS_NONE
+	return btn
+
+# Legacy helpers (still called by older code paths in this file)
+func _make_button(text: String, pos: Vector2, callback: Callable) -> Button:
+	return _make_text_button(text, pos, 100, 36, callback)
 
 func _process(_delta):
 	if not main_ref:
@@ -190,9 +252,13 @@ func _process(_delta):
 	if not state:
 		return
 	
-	# Update move counter
-	move_label.text = "Moves: " + str(state.move_count)
-	
+	# Update move counter — par hint when present
+	var par := int(state.level_data.get("par_moves", 0))
+	if par > 0:
+		move_label.text = str(state.move_count) + " / " + str(par) + " moves"
+	else:
+		move_label.text = str(state.move_count) + " moves"
+
 	# Update level name
 	if level_name_label:
 		level_name_label.text = main_ref.get_current_level_name()
@@ -200,48 +266,48 @@ func _process(_delta):
 func show_win(stars: int, pack_info: Dictionary):
 	if win_overlay.visible:
 		return
-	
-	var viewport = get_viewport().get_visible_rect().size
-	
+
 	win_overlay.visible = true
-	win_overlay.color = Color(0, 0, 0, 0.7)
+	win_overlay.color = Color(0, 0, 0, 0.55)
 	win_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-	
-	# Win title
-	win_label.text = "Level Complete!"
-	win_label.position = Vector2(0, viewport.y * 0.25)
-	win_label.size = Vector2(viewport.x, 40)
+	if win_card:
+		win_card.visible = true
+
+	# Title
+	win_label.text = "Level Complete"
 	win_label.visible = true
-	
-	# Stars
+
+	# Stars — filled vs empty
 	var star_text = ""
 	for i in range(stars):
-		star_text += "★"
+		star_text += "★ "
 	for i in range(3 - stars):
-		star_text += "☆"
-	
-	stars_label.text = star_text
-	stars_label.position = Vector2(0, viewport.y * 0.32)
-	stars_label.size = Vector2(viewport.x, 60)
+		star_text += "☆ "
+	stars_label.text = star_text.strip_edges()
 	stars_label.visible = true
-	
-	# Pack info
+
+	# Pack info label
+	var vp: Vector2 = get_viewport().get_visible_rect().size
+	var card_w := 320.0
+	var card_x := (vp.x - card_w) / 2
+	var card_y := (vp.y - 280) / 2
 	var info_label = Label.new()
 	info_label.name = "WinInfoLabel"
-	info_label.text = pack_info.name + " Pack  —  Level " + str(pack_info.level_in_pack + 1)
-	info_label.add_theme_font_size_override("font_size", 14)
-	info_label.add_theme_color_override("font_color", Color("#888888"))
+	info_label.text = pack_info.name + " · Level " + str(pack_info.level_in_pack + 1)
+	info_label.add_theme_font_size_override("font_size", 13)
+	info_label.add_theme_color_override("font_color", StyleScript.TEXT_MUTED)
 	info_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	info_label.position = Vector2(0, viewport.y * 0.42)
-	info_label.size = Vector2(viewport.x, 24)
+	info_label.position = Vector2(card_x, card_y + 152)
+	info_label.size = Vector2(card_w, 22)
 	add_child(info_label)
-	
-	# Show buttons
+
 	next_button.visible = true
 	menu_from_win.visible = true
 
 func _hide_win():
 	win_overlay.visible = false
+	if win_card:
+		win_card.visible = false
 	win_label.visible = false
 	stars_label.visible = false
 	next_button.visible = false
@@ -280,6 +346,8 @@ func _on_menu():
 func show_stuck():
 	stuck_overlay.visible = true
 	stuck_overlay.color = Color(0, 0, 0, 0.45)
+	if stuck_card:
+		stuck_card.visible = true
 	stuck_label.visible = true
 	stuck_undo_button.visible = true
 	stuck_restart_button.visible = true
@@ -288,6 +356,8 @@ func hide_stuck():
 	if stuck_overlay:
 		stuck_overlay.visible = false
 		stuck_overlay.color = Color(0, 0, 0, 0)
+	if stuck_card:
+		stuck_card.visible = false
 	if stuck_label:
 		stuck_label.visible = false
 	if stuck_undo_button:
@@ -302,6 +372,8 @@ func _on_open_settings():
 	settings_overlay.visible = true
 	settings_overlay.color = Color(0, 0, 0, 0.6)
 	settings_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	if settings_card:
+		settings_card.visible = true
 	cb_button.visible = true
 	mute_button.visible = true
 	close_settings_button.visible = true
@@ -313,6 +385,7 @@ func _on_close_settings():
 		settings_overlay.visible = false
 		settings_overlay.color = Color(0, 0, 0, 0)
 		settings_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if settings_card: settings_card.visible = false
 	if cb_button: cb_button.visible = false
 	if mute_button: mute_button.visible = false
 	if close_settings_button: close_settings_button.visible = false
@@ -320,8 +393,8 @@ func _on_close_settings():
 func _refresh_settings_labels():
 	if not main_ref:
 		return
-	cb_button.text = "Colorblind: " + ("ON" if main_ref.is_colorblind() else "OFF")
-	mute_button.text = "Sound: " + ("OFF" if main_ref.is_muted() else "ON")
+	cb_button.text = "    Colorblind shapes" + ("     ON" if main_ref.is_colorblind() else "     OFF")
+	mute_button.text = "    Sound" + ("                  OFF" if main_ref.is_muted() else "                  ON")
 
 func _on_toggle_colorblind():
 	if main_ref:
