@@ -4,14 +4,14 @@ extends RefCounted
 # Algorithm: Start with sorted tubes, then perform random valid moves to scramble
 # This guarantees the puzzle has at least one solution (reverse the moves)
 
-# Difficulty configs: [colors, tubes, empty_tubes, scramble_moves, par_mult, specials_chance]
+# Difficulty configs: [colors, tubes, empty_tubes, scramble_moves, par_mult, specials]
 const DIFFICULTY_PRESETS = {
-	"very_easy":  { "colors": 3, "empty_tubes": 2, "capacity": 4, "scramble_moves": 8,  "par_mult": 1.3, "specials": [] },
-	"easy":       { "colors": 4, "empty_tubes": 2, "capacity": 4, "scramble_moves": 12, "par_mult": 1.3, "specials": [] },
-	"medium":     { "colors": 5, "empty_tubes": 2, "capacity": 4, "scramble_moves": 16, "par_mult": 1.4, "specials": ["rainbow"] },
-	"hard":       { "colors": 6, "empty_tubes": 2, "capacity": 4, "scramble_moves": 20, "par_mult": 1.5, "specials": ["rainbow", "stone"] },
-	"expert":     { "colors": 7, "empty_tubes": 2, "capacity": 4, "scramble_moves": 24, "par_mult": 1.6, "specials": ["rainbow", "stone", "magnet", "hourglass"] },
-	"master":     { "colors": 8, "empty_tubes": 2, "capacity": 4, "scramble_moves": 28, "par_mult": 1.8, "specials": ["rainbow", "stone", "magnet", "bomb", "hourglass"] },
+	"very_easy":  { "colors": 3, "empty_tubes": 2, "capacity": 4, "scramble_moves": 25, "par_mult": 1.3, "specials": [] },
+	"easy":       { "colors": 4, "empty_tubes": 2, "capacity": 4, "scramble_moves": 35, "par_mult": 1.3, "specials": [] },
+	"medium":     { "colors": 5, "empty_tubes": 2, "capacity": 4, "scramble_moves": 50, "par_mult": 1.4, "specials": ["rainbow"] },
+	"hard":       { "colors": 6, "empty_tubes": 2, "capacity": 4, "scramble_moves": 70, "par_mult": 1.5, "specials": ["rainbow", "stone"] },
+	"expert":     { "colors": 7, "empty_tubes": 2, "capacity": 4, "scramble_moves": 95, "par_mult": 1.6, "specials": ["rainbow", "stone", "magnet", "hourglass"] },
+	"master":     { "colors": 8, "empty_tubes": 2, "capacity": 4, "scramble_moves": 130, "par_mult": 1.8, "specials": ["rainbow", "stone", "magnet", "bomb", "hourglass"] },
 }
 
 # Level pack definitions
@@ -71,42 +71,76 @@ static func _generate_puzzle(colors: int, capacity: int, empty_tubes: int, scram
 		tubes.append([])
 	
 	# Scramble by performing random valid moves
+	# Constraints to avoid trivial back-and-forth:
+	#   * never reverse the immediately previous move
+	#   * never make a move that completes a tube (would let us re-arrive at sorted)
+	#   * never move from a tube that just received its previous ball
 	var actual_moves = 0
 	var attempts = 0
-	var max_attempts = scramble_moves * 5
-	
+	var max_attempts = scramble_moves * 10
+	var last_from := -1
+	var last_to := -1
+
 	while actual_moves < scramble_moves and attempts < max_attempts:
 		attempts += 1
-		
-		# Pick a random non-empty, non-complete source tube
+
+		# Pick a random non-empty source tube — but not the tube that just
+		# received a ball (forbids immediate reversal). Source CAN be a
+		# complete monochrome tube — that's the whole point of scrambling.
 		var from_candidates = []
 		for i in range(total_tubes):
-			if tubes[i].size() > 0 and not _is_tube_complete(tubes[i], capacity):
-				from_candidates.append(i)
-		
-		if from_candidates.size() == 0:
+			if tubes[i].size() == 0:
+				continue
+			if i == last_to:
+				continue
+			from_candidates.append(i)
+		if from_candidates.is_empty():
+			for i in range(total_tubes):
+				if tubes[i].size() > 0:
+					from_candidates.append(i)
+		if from_candidates.is_empty():
 			break
-		
+
 		var from_idx = from_candidates[rng.randi() % from_candidates.size()]
-		
-		# Pick a valid destination
-		var to_candidates = []
 		var src_top = tubes[from_idx][-1]
+
+		# Pick a valid destination — never one that would complete the tube
+		# and (if possible) never the previous source (immediate reverse).
+		var to_candidates = []
 		for i in range(total_tubes):
 			if i == from_idx:
 				continue
-			if tubes[i].size() < capacity:
-				if tubes[i].size() == 0 or tubes[i][-1] == src_top:
-					to_candidates.append(i)
-		
-		if to_candidates.size() == 0:
+			if tubes[i].size() >= capacity:
+				continue
+			if tubes[i].size() > 0 and tubes[i][-1] != src_top:
+				continue
+			# Would this move complete a monochrome tube?
+			if tubes[i].size() == capacity - 1 and _would_complete(tubes[i], src_top, capacity):
+				continue
+			# Avoid immediate reverse if a non-reverse option exists
+			if i == last_from:
+				continue
+			to_candidates.append(i)
+		if to_candidates.is_empty():
+			# Relax: allow reverse but still no completion
+			for i in range(total_tubes):
+				if i == from_idx or tubes[i].size() >= capacity:
+					continue
+				if tubes[i].size() > 0 and tubes[i][-1] != src_top:
+					continue
+				if tubes[i].size() == capacity - 1 and _would_complete(tubes[i], src_top, capacity):
+					continue
+				to_candidates.append(i)
+		if to_candidates.is_empty():
 			continue
-		
-		# Move ball
+
 		var to_idx = to_candidates[rng.randi() % to_candidates.size()]
 		var ball = tubes[from_idx].pop_back()
 		tubes[to_idx].append(ball)
+		last_from = from_idx
+		last_to = to_idx
 		actual_moves += 1
+
 	
 	# Calculate par moves
 	var par_moves = max(1, ceili(scramble_moves * par_mult * (1.0 + float(colors) / 10.0)))
@@ -192,6 +226,16 @@ static func _is_tube_complete(tube: Array, capacity: int) -> bool:
 		if ball != first:
 			return false
 	return true
+
+# Would placing `ball` on this tube complete it as a monochrome stack?
+static func _would_complete(tube: Array, ball, capacity: int) -> bool:
+	if tube.size() + 1 != capacity:
+		return false
+	for b in tube:
+		if b != ball:
+			return false
+	return true
+
 
 # Get which pack a level belongs to
 static func _get_pack_for_level(level_idx: int) -> Dictionary:
