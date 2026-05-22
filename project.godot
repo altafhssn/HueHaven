@@ -15,6 +15,10 @@ config/description="A serene puzzle game — sort colored balls into matching tu
 run/main_scene="res://scenes/Main.tscn"
 config/features=PackedStringArray("4.6")
 
+[autoload]
+
+Audio="*res://scripts/Audio.gd"
+
 [display]
 
 window/size/viewport_width=480

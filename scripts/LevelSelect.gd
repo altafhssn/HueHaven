@@ -37,10 +37,6 @@ func _ready():
 	pack_label = _make_label("", 16, Color("#888888"), Vector2(0, 70), Vector2(viewport.x, 30))
 	add_child(pack_label)
 	
-	# Back button
-	back_button = _make_button("← Back", Vector2(16, 16), _on_back)
-	add_child(back_button)
-	
 	# Grid dimensions
 	cols = max(4, int(viewport.x / (cell_size + cell_gap)))
 	
@@ -106,39 +102,30 @@ func _show_pack(pack_idx: int):
 		level_buttons.append(next_btn)
 
 func _make_level_button(level_idx: int, pos: Vector2) -> Control:
-	var container = Control.new()
-	container.position = pos
-	container.size = Vector2(cell_size, cell_size + 20)
-	
 	var is_unlocked = progression.is_level_unlocked(level_idx)
 	var stars = progression.get_stars(level_idx)
 	var level_num = level_idx + 1
-	
-	# Background
-	var bg = ColorRect.new()
-	bg.size = Vector2(cell_size, cell_size)
-	bg.color = Color("#1A1A2E") if is_unlocked else Color("#111122")
-	container.add_child(bg)
-	
-	# Border
-	var border = ColorRect.new()
-	border.position = Vector2(-1, -1)
-	border.size = Vector2(cell_size + 2, cell_size + 2)
-	border.color = Color("#2A2A4E") if is_unlocked else Color("#1A1A20")
-	container.add_child(border)
-	
+
+	var btn = Button.new()
+	btn.position = pos
+	btn.size = Vector2(cell_size, cell_size)
+	btn.disabled = not is_unlocked
+	btn.focus_mode = Control.FOCUS_NONE
+
+	# Style the button like a card
+	var bg_color := Color("#1A1A2E") if is_unlocked else Color("#111122")
+	var border_color := Color("#2A2A4E") if is_unlocked else Color("#1A1A20")
+	btn.add_theme_stylebox_override("normal", _make_tile_style(bg_color, border_color))
+	btn.add_theme_stylebox_override("hover", _make_tile_style(Color("#252548"), border_color))
+	btn.add_theme_stylebox_override("pressed", _make_tile_style(Color("#15152A"), border_color))
+	btn.add_theme_stylebox_override("disabled", _make_tile_style(bg_color, border_color))
+	btn.add_theme_color_override("font_color", Color("#e8d5a3"))
+	btn.add_theme_color_override("font_disabled_color", Color("#444455"))
+	btn.add_theme_font_size_override("font_size", 20)
+
 	if is_unlocked:
-		# Level number
-		var label = Label.new()
-		label.text = str(level_num)
-		label.add_theme_font_size_override("font_size", 20)
-		label.add_theme_color_override("font_color", Color("#e8d5a3"))
-		label.position = Vector2(0, cell_size * 0.2)
-		label.size = Vector2(cell_size, cell_size * 0.5)
-		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		container.add_child(label)
-		
-		# Stars
+		btn.text = str(level_num)
+		# Stars: append below as a child Label
 		if stars > 0:
 			var stars_text = ""
 			for s in range(stars):
@@ -147,36 +134,32 @@ func _make_level_button(level_idx: int, pos: Vector2) -> Control:
 			star_label.text = stars_text
 			star_label.add_theme_font_size_override("font_size", 12)
 			star_label.add_theme_color_override("font_color", Color("#e8d5a3"))
-			star_label.position = Vector2(0, cell_size - 16)
+			star_label.position = Vector2(0, cell_size - 18)
 			star_label.size = Vector2(cell_size, 16)
 			star_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			container.add_child(star_label)
-		
-		# Click handler
-		container.gui_input.connect(func(event):
-			if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-				_on_level_selected(level_idx)
-		)
-		container.mouse_filter = Control.MOUSE_FILTER_STOP
+			star_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			btn.add_child(star_label)
+		btn.pressed.connect(_on_level_selected.bind(level_idx))
 	else:
-		# Lock icon
-		var lock = Label.new()
-		lock.text = "🔒"
-		lock.add_theme_font_size_override("font_size", 24)
-		lock.position = Vector2(0, cell_size * 0.25)
-		lock.size = Vector2(cell_size, cell_size * 0.5)
-		lock.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		container.add_child(lock)
-	
-	return container
+		btn.text = "🔒"
+		btn.add_theme_font_size_override("font_size", 24)
+
+	return btn
+
+func _make_tile_style(bg: Color, border: Color) -> StyleBox:
+	var sb = StyleBoxFlat.new()
+	sb.bg_color = bg
+	sb.set_border_width_all(1)
+	sb.border_color = border
+	sb.corner_radius_top_left = 4
+	sb.corner_radius_top_right = 4
+	sb.corner_radius_bottom_right = 4
+	sb.corner_radius_bottom_left = 4
+	return sb
 
 func _on_level_selected(level_idx: int):
 	if main_ref:
 		main_ref.start_level(level_idx)
-
-func _on_back():
-	if main_ref:
-		main_ref.show_level_select()
 
 func _on_prev_pack():
 	current_pack_index -= 1

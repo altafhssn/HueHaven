@@ -17,6 +17,18 @@ var stars_label = null
 var next_button = null
 var menu_from_win = null
 
+var stuck_overlay = null
+var stuck_label = null
+var stuck_restart_button = null
+var stuck_undo_button = null
+
+var settings_overlay = null
+var settings_open: bool = false
+var settings_button = null
+var cb_button = null
+var mute_button = null
+var close_settings_button = null
+
 var ACCENT = Color("#e8d5a3")
 var BG = Color("#0D0D1A")
 
@@ -91,6 +103,60 @@ func _setup_hud():
 	menu_from_win = _make_button("Level Select", Vector2(180, 560), _on_menu)
 	menu_from_win.visible = false
 	add_child(menu_from_win)
+
+	# Settings button (gear)
+	settings_button = _make_button("⚙", Vector2(440, 16), _on_open_settings)
+	settings_button.size = Vector2(28, 28)
+	add_child(settings_button)
+
+	# Stuck overlay
+	stuck_overlay = ColorRect.new()
+	stuck_overlay.color = Color(0, 0, 0, 0)
+	stuck_overlay.size = get_viewport().get_visible_rect().size
+	stuck_overlay.visible = false
+	stuck_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(stuck_overlay)
+
+	stuck_label = Label.new()
+	stuck_label.add_theme_font_size_override("font_size", 22)
+	stuck_label.add_theme_color_override("font_color", Color("#ff8888"))
+	stuck_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	stuck_label.text = "No moves left!"
+	stuck_label.position = Vector2(0, 420)
+	stuck_label.size = Vector2(480, 30)
+	stuck_label.visible = false
+	add_child(stuck_label)
+
+	stuck_undo_button = _make_button("↩ Undo", Vector2(120, 460), _on_undo)
+	stuck_undo_button.visible = false
+	add_child(stuck_undo_button)
+
+	stuck_restart_button = _make_button("↻ Restart", Vector2(260, 460), _on_restart)
+	stuck_restart_button.visible = false
+	add_child(stuck_restart_button)
+
+	# Settings overlay
+	settings_overlay = ColorRect.new()
+	settings_overlay.color = Color(0, 0, 0, 0)
+	settings_overlay.size = get_viewport().get_visible_rect().size
+	settings_overlay.visible = false
+	settings_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(settings_overlay)
+
+	cb_button = _make_button("", Vector2(140, 350), _on_toggle_colorblind)
+	cb_button.size = Vector2(200, 32)
+	cb_button.visible = false
+	add_child(cb_button)
+
+	mute_button = _make_button("", Vector2(140, 390), _on_toggle_mute)
+	mute_button.size = Vector2(200, 32)
+	mute_button.visible = false
+	add_child(mute_button)
+
+	close_settings_button = _make_button("Close", Vector2(180, 440), _on_close_settings)
+	close_settings_button.size = Vector2(120, 32)
+	close_settings_button.visible = false
+	add_child(close_settings_button)
 
 func _make_button(text: String, pos: Vector2, callback: Callable):
 	var btn = Button.new()
@@ -194,8 +260,8 @@ func _on_restart():
 		_hide_win()
 
 func _on_hint():
-	# Placeholder — will implement hint system later
-	pass
+	if main_ref:
+		main_ref.show_hint()
 
 func _on_next():
 	_hide_win()
@@ -204,5 +270,65 @@ func _on_next():
 
 func _on_menu():
 	_hide_win()
+	hide_stuck()
+	_on_close_settings()
 	if main_ref:
 		main_ref.back_to_menu()
+
+# --- Stuck overlay ---
+
+func show_stuck():
+	stuck_overlay.visible = true
+	stuck_overlay.color = Color(0, 0, 0, 0.45)
+	stuck_label.visible = true
+	stuck_undo_button.visible = true
+	stuck_restart_button.visible = true
+
+func hide_stuck():
+	if stuck_overlay:
+		stuck_overlay.visible = false
+		stuck_overlay.color = Color(0, 0, 0, 0)
+	if stuck_label:
+		stuck_label.visible = false
+	if stuck_undo_button:
+		stuck_undo_button.visible = false
+	if stuck_restart_button:
+		stuck_restart_button.visible = false
+
+# --- Settings ---
+
+func _on_open_settings():
+	settings_open = true
+	settings_overlay.visible = true
+	settings_overlay.color = Color(0, 0, 0, 0.6)
+	settings_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	cb_button.visible = true
+	mute_button.visible = true
+	close_settings_button.visible = true
+	_refresh_settings_labels()
+
+func _on_close_settings():
+	settings_open = false
+	if settings_overlay:
+		settings_overlay.visible = false
+		settings_overlay.color = Color(0, 0, 0, 0)
+		settings_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if cb_button: cb_button.visible = false
+	if mute_button: mute_button.visible = false
+	if close_settings_button: close_settings_button.visible = false
+
+func _refresh_settings_labels():
+	if not main_ref:
+		return
+	cb_button.text = "Colorblind: " + ("ON" if main_ref.is_colorblind() else "OFF")
+	mute_button.text = "Sound: " + ("OFF" if main_ref.is_muted() else "ON")
+
+func _on_toggle_colorblind():
+	if main_ref:
+		main_ref.toggle_colorblind()
+		_refresh_settings_labels()
+
+func _on_toggle_mute():
+	if main_ref:
+		main_ref.toggle_mute()
+		_refresh_settings_labels()

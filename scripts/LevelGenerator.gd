@@ -4,14 +4,14 @@ extends RefCounted
 # Algorithm: Start with sorted tubes, then perform random valid moves to scramble
 # This guarantees the puzzle has at least one solution (reverse the moves)
 
-# Difficulty configs: [colors, tubes, empty_tubes, scramble_moves, par_mult]
+# Difficulty configs: [colors, tubes, empty_tubes, scramble_moves, par_mult, specials_chance]
 const DIFFICULTY_PRESETS = {
-	"very_easy":  { "colors": 3, "empty_tubes": 2, "capacity": 4, "scramble_moves": 8,  "par_mult": 1.3 },
-	"easy":       { "colors": 4, "empty_tubes": 2, "capacity": 4, "scramble_moves": 12, "par_mult": 1.3 },
-	"medium":     { "colors": 5, "empty_tubes": 2, "capacity": 4, "scramble_moves": 16, "par_mult": 1.4 },
-	"hard":       { "colors": 6, "empty_tubes": 2, "capacity": 4, "scramble_moves": 20, "par_mult": 1.5 },
-	"expert":     { "colors": 7, "empty_tubes": 2, "capacity": 4, "scramble_moves": 24, "par_mult": 1.6 },
-	"master":     { "colors": 8, "empty_tubes": 2, "capacity": 4, "scramble_moves": 28, "par_mult": 1.8 },
+	"very_easy":  { "colors": 3, "empty_tubes": 2, "capacity": 4, "scramble_moves": 8,  "par_mult": 1.3, "specials": [] },
+	"easy":       { "colors": 4, "empty_tubes": 2, "capacity": 4, "scramble_moves": 12, "par_mult": 1.3, "specials": [] },
+	"medium":     { "colors": 5, "empty_tubes": 2, "capacity": 4, "scramble_moves": 16, "par_mult": 1.4, "specials": ["rainbow"] },
+	"hard":       { "colors": 6, "empty_tubes": 2, "capacity": 4, "scramble_moves": 20, "par_mult": 1.5, "specials": ["rainbow", "stone"] },
+	"expert":     { "colors": 7, "empty_tubes": 2, "capacity": 4, "scramble_moves": 24, "par_mult": 1.6, "specials": ["rainbow", "stone", "magnet", "hourglass"] },
+	"master":     { "colors": 8, "empty_tubes": 2, "capacity": 4, "scramble_moves": 28, "par_mult": 1.8, "specials": ["rainbow", "stone", "magnet", "bomb", "hourglass"] },
 }
 
 # Level pack definitions
@@ -39,7 +39,16 @@ static func generate_level(level_idx: int) -> Dictionary:
 	var color_range = pack.max_colors - pack.min_colors
 	var colors = pack.min_colors + (level_idx % (color_range + 1))
 	
-	return _generate_puzzle(colors, preset.capacity, preset.empty_tubes, preset.scramble_moves, preset.par_mult, seed_val)
+	var level = _generate_puzzle(colors, preset.capacity, preset.empty_tubes, preset.scramble_moves, preset.par_mult, seed_val)
+
+	# Inject one special every few levels for tiers that support them
+	var pool: Array = preset.get("specials", [])
+	if not pool.is_empty() and (level_idx % 3) != 0:
+		var rng := RandomNumberGenerator.new()
+		rng.seed = seed_val + 13
+		_inject_specials(level, pool, rng)
+
+	return level
 
 # Generate a puzzle with given parameters
 static func _generate_puzzle(colors: int, capacity: int, empty_tubes: int, scramble_moves: int, par_mult: float, seed_val: int) -> Dictionary:
@@ -101,7 +110,7 @@ static func _generate_puzzle(colors: int, capacity: int, empty_tubes: int, scram
 	
 	# Calculate par moves
 	var par_moves = max(1, ceili(scramble_moves * par_mult * (1.0 + float(colors) / 10.0)))
-	
+
 	# Deep copy tube contents
 	var contents = []
 	for t in tubes:
@@ -109,7 +118,7 @@ static func _generate_puzzle(colors: int, capacity: int, empty_tubes: int, scram
 		for ball in t:
 			tube_copy.append(ball)
 		contents.append(tube_copy)
-	
+
 	return {
 		"colors": colors,
 		"capacity": capacity,
@@ -118,6 +127,61 @@ static func _generate_puzzle(colors: int, capacity: int, empty_tubes: int, scram
 		"bombs": false,
 		"specials": [],
 	}
+
+# Inject a single special ball by transmuting one existing regular ball.
+# `pool` lists special types eligible to spawn. Idempotent on the input rng.
+static func _inject_specials(level: Dictionary, pool: Array, rng: RandomNumberGenerator) -> void:
+	if pool.is_empty():
+		return
+	var contents = level.contents
+	var capacity = int(level.capacity)
+
+	# Pick a special type for this level
+	var stype: String = pool[rng.randi() % pool.size()]
+
+	# Find candidate ball slots: avoid the topmost ball of a tube (would dominate
+	# the puzzle), and never replace inside an already-empty tube.
+	var candidates := []  # [tube_idx, ball_idx, color]
+	for ti in range(contents.size()):
+		var tube = contents[ti]
+		for bi in range(tube.size() - 1):  # exclude top
+			candidates.append([ti, bi, int(tube[bi])])
+	if candidates.is_empty():
+		# Fall back to top ball if needed
+		for ti in range(contents.size()):
+			var tube = contents[ti]
+			if tube.size() > 0:
+				candidates.append([ti, tube.size() - 1, int(tube[-1])])
+	if candidates.is_empty():
+		return
+
+	var pick = candidates[rng.randi() % candidates.size()]
+	var ti: int = pick[0]
+	var bi: int = pick[1]
+	var color: int = pick[2]
+
+	var special_ball: Dictionary
+	match stype:
+		"bomb":
+			special_ball = { "type": "bomb", "color": color, "meta": 12 + (rng.randi() % 6) }
+		"rainbow":
+			special_ball = { "type": "rainbow", "color": -1, "meta": null }
+		"stone":
+			special_ball = { "type": "stone", "color": color, "meta": null }
+			# Stones must sit at the bottom to be solvable; relocate
+			contents[ti].remove_at(bi)
+			contents[ti].insert(0, special_ball)
+			return
+		"magnet":
+			special_ball = { "type": "magnet", "color": color, "meta": null }
+		"hourglass":
+			special_ball = { "type": "hourglass", "color": -1, "meta": null }
+		_:
+			return
+
+	contents[ti][bi] = special_ball
+	level.specials = level.get("specials", [])
+	level.specials.append(stype)
 
 # Check if a tube is full and monochrome (completed)
 static func _is_tube_complete(tube: Array, capacity: int) -> bool:
