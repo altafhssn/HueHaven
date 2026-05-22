@@ -33,6 +33,7 @@ var cell_size: float = 64.0
 var tube_width: float = 48.0
 var tube_height: float = 220.0
 var ball_radius: float = 18.0
+var _tube_gap: float = 12.0
 var grid_offset: Vector2
 
 var shake_tubes: Dictionary = {}  # tube_idx -> timer
@@ -125,7 +126,21 @@ func _load_generated_level(idx: int):
 
 func _calc_grid_offset(level_data) -> Vector2:
 	var n_tubes = level_data.contents.size()
-	var total_width = n_tubes * (tube_width + 12) - 12
+	# Scale tube/ball size down for crowded levels so they fit within the viewport.
+	var margin = 24.0
+	var gap = 12.0
+	var available = viewport_size.x - margin * 2
+	var max_tube_w = (available - gap * (n_tubes - 1)) / n_tubes
+	tube_width = clamp(max_tube_w, 24.0, 48.0)
+	# If still too narrow, shrink the gap
+	if max_tube_w < 24.0:
+		gap = max(2.0, (available - 24.0 * n_tubes) / max(1, n_tubes - 1))
+		tube_width = 24.0
+	ball_radius = clamp(tube_width * 0.42, 8.0, 18.0)
+	tube_height = (ball_radius * 2 + 2) * level_data.capacity + 12
+	_tube_gap = gap
+
+	var total_width = n_tubes * (tube_width + gap) - gap
 	var start_x = (viewport_size.x - total_width) / 2
 	return Vector2(start_x, 180)
 
@@ -151,7 +166,7 @@ func _draw():
 		if shake_tubes.has(i):
 			var t = shake_tubes[i]
 			shake_x = sin(t * 60.0) * 8.0 * min(t / 0.3, 1.0)
-		var tube_x = grid_offset.x + i * (tube_width + 12) + shake_x
+		var tube_x = grid_offset.x + i * (tube_width + _tube_gap) + shake_x
 		var tube_rect = Rect2(tube_x, grid_offset.y, tube_width, tube_height)
 		
 		# Tube background
@@ -204,8 +219,8 @@ func _draw():
 	
 	# Draw animation ball if moving
 	if move_animating and anim_ball != null:
-		var from_x = grid_offset.x + anim_from * (tube_width + 12) + tube_width / 2
-		var to_x = grid_offset.x + anim_to * (tube_width + 12) + tube_width / 2
+		var from_x = grid_offset.x + anim_from * (tube_width + _tube_gap) + tube_width / 2
+		var to_x = grid_offset.x + anim_to * (tube_width + _tube_gap) + tube_width / 2
 		var from_y = grid_offset.y + tube_height - (game_state.tubes[anim_from].size() + 1) * (ball_radius * 2 + 2)
 		var to_y = grid_offset.y + tube_height - (game_state.tubes[anim_to].size() + 1) * (ball_radius * 2 + 2)
 
@@ -264,7 +279,7 @@ func _spawn_confetti(x: float, y: float, count: int):
 func _spawn_explosion(tube_idx: int):
 	# Visual: shake the tube + small confetti puff
 	shake_tubes[tube_idx] = 0.5
-	var x = grid_offset.x + tube_idx * (tube_width + 12) + tube_width / 2
+	var x = grid_offset.x + tube_idx * (tube_width + _tube_gap) + tube_width / 2
 	var y = grid_offset.y + tube_height * 0.5
 	_spawn_confetti(x, y, 20)
 
@@ -429,7 +444,7 @@ func _tube_tap(pos: Vector2):
 	
 	# Find which tube was tapped
 	for i in range(n_tubes):
-		var tube_x = grid_offset.x + i * (tube_width + 12)
+		var tube_x = grid_offset.x + i * (tube_width + _tube_gap)
 		var tube_rect = Rect2(tube_x, grid_offset.y, tube_width, tube_height)
 		
 		if tube_rect.has_point(pos):
