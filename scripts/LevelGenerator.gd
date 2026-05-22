@@ -4,24 +4,27 @@ extends RefCounted
 # Algorithm: Start with sorted tubes, then perform random valid moves to scramble
 # This guarantees the puzzle has at least one solution (reverse the moves)
 
-# Difficulty configs: [colors, tubes, empty_tubes, scramble_moves, par_mult, specials]
+# Difficulty configs.
+# `empty_tubes` is the key difficulty knob — fewer empties means much tighter solve space.
+# `min_disorder` is the minimum total inter-ball transitions required after scramble
+# (a monochrome tube contributes 0; a fully alternating tube contributes capacity-1).
 const DIFFICULTY_PRESETS = {
-	"very_easy":  { "colors": 3, "empty_tubes": 2, "capacity": 4, "scramble_moves": 25, "par_mult": 1.3, "specials": [] },
-	"easy":       { "colors": 4, "empty_tubes": 2, "capacity": 4, "scramble_moves": 35, "par_mult": 1.3, "specials": [] },
-	"medium":     { "colors": 5, "empty_tubes": 2, "capacity": 4, "scramble_moves": 50, "par_mult": 1.4, "specials": ["rainbow"] },
-	"hard":       { "colors": 6, "empty_tubes": 2, "capacity": 4, "scramble_moves": 70, "par_mult": 1.5, "specials": ["rainbow", "stone"] },
-	"expert":     { "colors": 7, "empty_tubes": 2, "capacity": 4, "scramble_moves": 95, "par_mult": 1.6, "specials": ["rainbow", "stone", "magnet", "hourglass"] },
-	"master":     { "colors": 8, "empty_tubes": 2, "capacity": 4, "scramble_moves": 130, "par_mult": 1.8, "specials": ["rainbow", "stone", "magnet", "bomb", "hourglass"] },
+	"very_easy":  { "colors": 3,  "empty_tubes": 2, "capacity": 4, "scramble_moves": 30,  "par_mult": 1.4, "min_disorder": 4,  "specials": [] },
+	"easy":       { "colors": 4,  "empty_tubes": 2, "capacity": 4, "scramble_moves": 50,  "par_mult": 1.5, "min_disorder": 7,  "specials": [] },
+	"medium":     { "colors": 5,  "empty_tubes": 2, "capacity": 4, "scramble_moves": 80,  "par_mult": 1.6, "min_disorder": 11, "specials": ["rainbow"] },
+	"hard":       { "colors": 6,  "empty_tubes": 1, "capacity": 4, "scramble_moves": 120, "par_mult": 1.8, "min_disorder": 14, "specials": ["rainbow", "stone"] },
+	"expert":     { "colors": 8,  "empty_tubes": 1, "capacity": 4, "scramble_moves": 180, "par_mult": 2.0, "min_disorder": 18, "specials": ["rainbow", "stone", "magnet", "hourglass"] },
+	"master":     { "colors": 10, "empty_tubes": 1, "capacity": 4, "scramble_moves": 250, "par_mult": 2.2, "min_disorder": 22, "specials": ["rainbow", "stone", "magnet", "bomb", "hourglass"] },
 }
 
 # Level pack definitions
 const LEVEL_PACKS = [
-	{ "name": "Tutorial",   "levels": 10, "difficulty": "very_easy", "min_colors": 3, "max_colors": 3 },
-	{ "name": "Easy",       "levels": 40, "difficulty": "easy",     "min_colors": 3, "max_colors": 4 },
-	{ "name": "Medium",     "levels": 60, "difficulty": "medium",   "min_colors": 4, "max_colors": 5 },
-	{ "name": "Hard",       "levels": 100, "difficulty": "hard",    "min_colors": 5, "max_colors": 6 },
-	{ "name": "Expert",     "levels": 150, "difficulty": "expert",  "min_colors": 6, "max_colors": 7 },
-	{ "name": "Master",     "levels": 140, "difficulty": "master",  "min_colors": 7, "max_colors": 8 },
+	{ "name": "Tutorial",   "levels": 10,  "difficulty": "very_easy", "min_colors": 3,  "max_colors": 3 },
+	{ "name": "Easy",       "levels": 40,  "difficulty": "easy",      "min_colors": 4,  "max_colors": 4 },
+	{ "name": "Medium",     "levels": 60,  "difficulty": "medium",    "min_colors": 5,  "max_colors": 5 },
+	{ "name": "Hard",       "levels": 100, "difficulty": "hard",      "min_colors": 6,  "max_colors": 6 },
+	{ "name": "Expert",     "levels": 150, "difficulty": "expert",    "min_colors": 7,  "max_colors": 8 },
+	{ "name": "Master",     "levels": 140, "difficulty": "master",    "min_colors": 8,  "max_colors": 10 },
 ]
 
 const TOTAL_LEVELS = 500
@@ -39,7 +42,8 @@ static func generate_level(level_idx: int) -> Dictionary:
 	var color_range = pack.max_colors - pack.min_colors
 	var colors = pack.min_colors + (level_idx % (color_range + 1))
 	
-	var level = _generate_puzzle(colors, preset.capacity, preset.empty_tubes, preset.scramble_moves, preset.par_mult, seed_val)
+	var min_disorder: int = preset.get("min_disorder", 0)
+	var level = _generate_puzzle(colors, preset.capacity, preset.empty_tubes, preset.scramble_moves, preset.par_mult, min_disorder, seed_val)
 
 	# Inject one special every few levels for tiers that support them
 	var pool: Array = preset.get("specials", [])
@@ -51,7 +55,7 @@ static func generate_level(level_idx: int) -> Dictionary:
 	return level
 
 # Generate a puzzle with given parameters
-static func _generate_puzzle(colors: int, capacity: int, empty_tubes: int, scramble_moves: int, par_mult: float, seed_val: int) -> Dictionary:
+static func _generate_puzzle(colors: int, capacity: int, empty_tubes: int, scramble_moves: int, par_mult: float, min_disorder: int, seed_val: int) -> Dictionary:
 	var rng = RandomNumberGenerator.new()
 	rng.seed = seed_val
 	
@@ -77,11 +81,15 @@ static func _generate_puzzle(colors: int, capacity: int, empty_tubes: int, scram
 	#   * never move from a tube that just received its previous ball
 	var actual_moves = 0
 	var attempts = 0
-	var max_attempts = scramble_moves * 10
+	# Allow extra attempts; we keep going past `scramble_moves` until disorder threshold is hit.
+	var max_attempts = max(scramble_moves * 15, 400)
 	var last_from := -1
 	var last_to := -1
 
-	while actual_moves < scramble_moves and attempts < max_attempts:
+	while attempts < max_attempts:
+		# Stop once we've made enough moves AND scattered the balls enough
+		if actual_moves >= scramble_moves and _measure_disorder(tubes) >= min_disorder:
+			break
 		attempts += 1
 
 		# Pick a random non-empty source tube — but not the tube that just
@@ -226,6 +234,16 @@ static func _is_tube_complete(tube: Array, capacity: int) -> bool:
 		if ball != first:
 			return false
 	return true
+
+# Count adjacent-pair transitions across all tubes (higher = more scattered).
+# A monochrome tube contributes 0; a fully alternating tube contributes capacity-1.
+static func _measure_disorder(tubes: Array) -> int:
+	var total := 0
+	for tube in tubes:
+		for i in range(1, tube.size()):
+			if tube[i] != tube[i - 1]:
+				total += 1
+	return total
 
 # Would placing `ball` on this tube complete it as a monochrome stack?
 static func _would_complete(tube: Array, ball, capacity: int) -> bool:
