@@ -40,39 +40,70 @@ func unlock_level(level_idx: int):
 func is_level_unlocked(level_idx: int) -> bool:
 	return level_idx <= get_highest_unlocked()
 
+# --- Settings ---
+
+func get_setting(key: String, default_value):
+	if save_data.has("settings") and save_data.settings.has(key):
+		return save_data.settings[key]
+	return default_value
+
+func set_setting(key: String, value) -> void:
+	if not save_data.has("settings"):
+		save_data.settings = {}
+	save_data.settings[key] = value
+	save_progress()
+
+func is_colorblind() -> bool:
+	return bool(get_setting("colorblind", false))
+
+func is_muted() -> bool:
+	return bool(get_setting("muted", false))
+
 # --- Save/Load ---
 
 func save_progress():
 	var cfg = ConfigFile.new()
-	
+
 	if save_data.has("stars"):
 		for idx in save_data.stars:
 			cfg.set_value("Progress", "star_" + str(idx), save_data.stars[idx])
-	
+
 	cfg.set_value("Progress", "highest_unlocked", save_data.get("unlocked", 0))
-	
+
+	if save_data.has("settings"):
+		for key in save_data.settings.keys():
+			cfg.set_value("Settings", key, save_data.settings[key])
+
 	cfg.save(SAVE_PATH)
 
 func load_save():
 	save_data = {}
 	var cfg = ConfigFile.new()
-	
+
 	var err = cfg.load(SAVE_PATH)
 	if err != OK:
 		# No save file yet, start fresh
 		save_data.unlocked = 0
 		save_data.stars = {}
+		save_data.settings = {}
 		return
-	
+
 	# Load stars
 	save_data.stars = {}
-	for key in cfg.get_section_keys("Progress"):
-		if key.begins_with("star_"):
-			var idx = int(key.substr(5))
-			save_data.stars[idx] = cfg.get_value("Progress", key, 0)
-	
+	if cfg.has_section("Progress"):
+		for key in cfg.get_section_keys("Progress"):
+			if key.begins_with("star_"):
+				var idx = int(key.substr(5))
+				save_data.stars[idx] = cfg.get_value("Progress", key, 0)
+
 	save_data.unlocked = cfg.get_value("Progress", "highest_unlocked", 0)
-	
+
+	# Settings
+	save_data.settings = {}
+	if cfg.has_section("Settings"):
+		for key in cfg.get_section_keys("Settings"):
+			save_data.settings[key] = cfg.get_value("Settings", key)
+
 	# Ensure level 0 is always unlocked
 	if not save_data.has("unlocked") or save_data.unlocked < 0:
 		save_data.unlocked = 0
@@ -81,5 +112,6 @@ func reset_all():
 	save_data = {
 		"unlocked": 0,
 		"stars": {},
+		"settings": save_data.get("settings", {}),
 	}
 	save_progress()
