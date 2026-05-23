@@ -111,16 +111,17 @@ func _draw_logo(viewport: Vector2):
 	StyleScript.draw_rounded_rect(self, icon_rect, Color("#1A2238"), icon_r, true)
 	StyleScript.draw_gradient_rect(self, icon_rect, Color("#22304A"), Color("#0E1828"), icon_r)
 
-	# ----- (2) Warm rim glow (contained) -----
+	# ----- (2) Cool cyan rim glow (contained) -----
+	var glow_tint := Color(0.45, 0.78, 0.95)  # soft cyan
 	var top_glow := Rect2(icon_rect.position.x, icon_rect.position.y, icon_size, icon_size * 0.50)
 	StyleScript.draw_gradient_rect(self, top_glow,
-		Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, 0.18),
-		Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, 0.0),
+		Color(glow_tint.r, glow_tint.g, glow_tint.b, 0.16),
+		Color(glow_tint.r, glow_tint.g, glow_tint.b, 0.0),
 		icon_r)
 	var bot_glow := Rect2(icon_rect.position.x, cy + icon_size * 0.05, icon_size, icon_size * 0.45)
 	StyleScript.draw_gradient_rect(self, bot_glow,
-		Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, 0.0),
-		Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, 0.14),
+		Color(glow_tint.r, glow_tint.g, glow_tint.b, 0.0),
+		Color(glow_tint.r, glow_tint.g, glow_tint.b, 0.12),
 		icon_r)
 
 	# ----- (3) Test tube — capsule-shaped glass vial centered in the icon -----
@@ -138,9 +139,9 @@ func _draw_logo(viewport: Vector2):
 		Color(0.65, 0.85, 0.98, 0.14),
 		Color(0.35, 0.55, 0.75, 0.08),
 		tube_corner_r)
-	# Tube outer rim — thin warm-tinted border
+	# Tube outer rim — thin cool cyan border
 	StyleScript.draw_rounded_rect(self, tube_rect,
-		Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, 0.50),
+		Color(0.55, 0.80, 0.95, 0.55),
 		tube_corner_r, false, 1.6)
 	# Left edge vertical highlight (light catching the glass)
 	draw_rect(Rect2(tube_x + 3, tube_y + tube_corner_r * 0.5, 2, tube_h - tube_corner_r), Color(1, 1, 1, 0.22))
@@ -153,17 +154,17 @@ func _draw_logo(viewport: Vector2):
 	var bot_y: float = tube_y + tube_h - inner_pad - ball_r
 	var step_y: float = (bot_y - top_y) / 2.0
 	var ball_colors := [
-		Color("#FF8C5A"),  # warm coral (top)
-		Color("#7AB8C4"),  # pale teal (middle)
+		Color("#9E7CB8"),  # soft lavender (top)
+		Color("#5DA8C4"),  # cool teal (middle)
 		Color("#7DBE82"),  # sage green (bottom)
 	]
 	for i in range(ball_colors.size()):
 		var by: float = top_y + float(i) * step_y
 		_draw_logo_ball(Vector2(cx, by), ball_r, ball_colors[i])
 
-	# ----- (5) Subtle accent border around the whole icon -----
+	# ----- (5) Subtle cool border around the whole icon -----
 	StyleScript.draw_rounded_rect(self, icon_rect,
-		Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, 0.20),
+		Color(0.55, 0.80, 0.95, 0.22),
 		icon_r, false, 1.5)
 
 func _draw_logo_ball(center: Vector2, r: float, color: Color) -> void:
