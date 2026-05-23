@@ -14,14 +14,20 @@ var main_ref = null
 const COLS: int = 4
 const CELL_SIZE: float = 88.0
 const CELL_GAP: float = 14.0
-const GRID_TOP: float = 200.0
+const GRID_TOP: float = 224.0
 const GRID_BOTTOM_PAD: float = 24.0
 
 var current_pack_index: int = 0
-var pack_tab_buttons: Array = []
 var level_buttons: Array = []
 var scroll_container: ScrollContainer = null
 var grid_holder: Control = null
+
+# Pack carousel widgets (rebuilt on pack change)
+var pack_name_label: Label = null
+var pack_count_label: Label = null
+var pack_progress_bar: Control = null
+var prev_pack_btn: Button = null
+var next_pack_btn: Button = null
 
 func _ready():
 	progression = ProgressionScript.new()
@@ -33,14 +39,11 @@ func _ready():
 	add_child(_icon_btn("back", Vector2(16, 16), 44, _on_back_to_menu))
 
 	# Title
-	add_child(StyleScript.make_label("Choose Level", 22, StyleScript.TEXT,
-		Vector2(0, 24), Vector2(viewport.x, 32)))
+	add_child(StyleScript.make_label("Levels", 17, StyleScript.TEXT_MUTED,
+		Vector2(0, 26), Vector2(viewport.x, 22)))
 
-	# Pack tabs row
-	_build_pack_tabs(viewport)
-
-	# Pack info label below tabs (smaller, muted)
-	# Will be set in _show_pack
+	# Pack carousel — prev arrow, big pack name, next arrow
+	_build_pack_carousel(viewport)
 
 	# Scroll container for the level grid
 	scroll_container = ScrollContainer.new()
@@ -57,49 +60,92 @@ func _ready():
 	# Default to pack containing highest unlocked
 	current_pack_index = _pack_index_for_level(progression.get_highest_unlocked())
 	_show_pack(current_pack_index)
-	_refresh_tab_styles()
 
 func _process(_delta):
 	queue_redraw()
 
-func _build_pack_tabs(viewport: Vector2):
-	var packs: Array = LevelGeneratorScript.get_packs()
-	var n: int = packs.size()
-	var pad: float = 12.0
-	var available: float = viewport.x - pad * 2.0
-	var gap: float = 4.0
-	var tab_w: float = (available - gap * float(n - 1)) / float(n)
-	var y: float = 72.0
-	for i in range(n):
-		var tab := Button.new()
-		tab.text = packs[i].name
-		tab.add_theme_font_size_override("font_size", 11)
-		StyleScript.style_button(tab, false)
-		tab.size = Vector2(tab_w, 30)
-		tab.position = Vector2(pad + i * (tab_w + gap), y)
-		tab.focus_mode = Control.FOCUS_NONE
-		var idx: int = i
-		tab.pressed.connect(func(): _on_pack_tab(idx))
-		add_child(tab)
-		pack_tab_buttons.append(tab)
+func _build_pack_carousel(viewport: Vector2):
+	var row_y: float = 72.0
+	var row_h: float = 56.0
+	var pad: float = 16.0
 
-func _on_pack_tab(idx: int):
-	current_pack_index = idx
-	_show_pack(idx)
-	_refresh_tab_styles()
-	# Reset scroll position to top
+	# Prev arrow (left)
+	prev_pack_btn = _arrow_btn("prev", Vector2(pad, row_y), 44, func(): _on_pack_step(-1))
+	add_child(prev_pack_btn)
+
+	# Next arrow (right)
+	next_pack_btn = _arrow_btn("next", Vector2(viewport.x - pad - 44, row_y), 44, func(): _on_pack_step(1))
+	add_child(next_pack_btn)
+
+	# Pack name (large, centered between arrows)
+	pack_name_label = Label.new()
+	pack_name_label.add_theme_font_size_override("font_size", 24)
+	pack_name_label.add_theme_color_override("font_color", StyleScript.TEXT)
+	pack_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	pack_name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	pack_name_label.position = Vector2(pad + 44, row_y)
+	pack_name_label.size = Vector2(viewport.x - (pad + 44) * 2, 30)
+	pack_name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(pack_name_label)
+
+	# Pack count + progress (smaller, just under name)
+	pack_count_label = Label.new()
+	pack_count_label.add_theme_font_size_override("font_size", 12)
+	pack_count_label.add_theme_color_override("font_color", StyleScript.TEXT_MUTED)
+	pack_count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	pack_count_label.position = Vector2(0, row_y + 32)
+	pack_count_label.size = Vector2(viewport.x, 18)
+	pack_count_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(pack_count_label)
+
+	# Slim progress bar (custom-drawn) sitting below the row
+	pack_progress_bar = Control.new()
+	pack_progress_bar.position = Vector2(pad + 28, row_y + 56)
+	pack_progress_bar.size = Vector2(viewport.x - (pad + 28) * 2, 4)
+	pack_progress_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pack_progress_bar.set_meta("ratio", 0.0)
+	pack_progress_bar.draw.connect(func():
+		var ratio: float = pack_progress_bar.get_meta("ratio", 0.0)
+		var w: float = pack_progress_bar.size.x
+		var h: float = pack_progress_bar.size.y
+		# Track
+		StyleScript.draw_rounded_rect(pack_progress_bar, Rect2(0, 0, w, h),
+			Color(StyleScript.PANEL.r, StyleScript.PANEL.g, StyleScript.PANEL.b, 0.7), h * 0.5, true)
+		# Fill
+		var fill_w: float = w * clamp(ratio, 0.0, 1.0)
+		if fill_w > 1:
+			StyleScript.draw_rounded_rect(pack_progress_bar, Rect2(0, 0, fill_w, h),
+				StyleScript.ACCENT, h * 0.5, true)
+	)
+	add_child(pack_progress_bar)
+
+func _on_pack_step(delta: int):
+	var packs: Array = LevelGeneratorScript.get_packs()
+	current_pack_index = clamp(current_pack_index + delta, 0, packs.size() - 1)
+	_show_pack(current_pack_index)
 	if scroll_container:
 		scroll_container.scroll_vertical = 0
 
-func _refresh_tab_styles():
-	for i in range(pack_tab_buttons.size()):
-		var btn: Button = pack_tab_buttons[i]
-		if i == current_pack_index:
-			btn.add_theme_color_override("font_color", Color("#1a1208"))
-			btn.add_theme_stylebox_override("normal", StyleScript.make_button_style(StyleScript.ACCENT, StyleScript.ACCENT_DIM, 18))
-		else:
-			btn.add_theme_color_override("font_color", StyleScript.TEXT_MUTED)
-			btn.add_theme_stylebox_override("normal", StyleScript.make_button_style(StyleScript.PANEL, StyleScript.PANEL_BORDER, 18))
+func _refresh_carousel():
+	var packs: Array = LevelGeneratorScript.get_packs()
+	var pack = packs[current_pack_index]
+	var start_level: int = 0
+	for i in range(current_pack_index):
+		start_level += packs[i].levels
+	pack_name_label.text = pack.name
+	# Count completed (≥1 star) within pack
+	var completed: int = 0
+	for i in range(pack.levels):
+		if progression.get_stars(start_level + i) > 0:
+			completed += 1
+	pack_count_label.text = str(completed) + " / " + str(pack.levels) + " complete   ·   Levels " + str(start_level + 1) + "–" + str(start_level + pack.levels)
+	pack_progress_bar.set_meta("ratio", float(completed) / float(pack.levels))
+	pack_progress_bar.queue_redraw()
+	# Disable arrows at ends
+	if prev_pack_btn:
+		prev_pack_btn.disabled = current_pack_index == 0
+	if next_pack_btn:
+		next_pack_btn.disabled = current_pack_index == packs.size() - 1
 
 func _pack_index_for_level(level_idx: int) -> int:
 	var packs: Array = LevelGeneratorScript.get_packs()
@@ -116,10 +162,6 @@ func _show_pack(pack_idx: int):
 		if is_instance_valid(btn):
 			btn.queue_free()
 	level_buttons.clear()
-	# Clear previous pack-info label
-	var prev_info := get_node_or_null("PackInfoLabel")
-	if prev_info:
-		prev_info.queue_free()
 
 	var packs: Array = LevelGeneratorScript.get_packs()
 	if pack_idx < 0 or pack_idx >= packs.size():
@@ -130,13 +172,8 @@ func _show_pack(pack_idx: int):
 	for i in range(pack_idx):
 		start_level += packs[i].levels
 
-	# Pack info label — sits just above the scroll area
-	var info_lbl := StyleScript.make_label(
-		pack.name + "  ·  " + str(start_level + 1) + "–" + str(start_level + pack.levels),
-		13, StyleScript.TEXT_MUTED,
-		Vector2(0, 168), Vector2(size.x, 22))
-	info_lbl.name = "PackInfoLabel"
-	add_child(info_lbl)
+	# Refresh the carousel header
+	_refresh_carousel()
 
 	# Layout the grid inside grid_holder
 	var grid_w: float = float(COLS) * CELL_SIZE + float(COLS - 1) * CELL_GAP
@@ -239,6 +276,37 @@ func _on_level_selected(level_idx: int):
 func _on_back_to_menu():
 	if main_ref:
 		main_ref.show_main_menu()
+
+func _arrow_btn(icon_name: String, pos: Vector2, sz: float, callback: Callable) -> Button:
+	var btn := Button.new()
+	btn.text = ""
+	btn.position = pos
+	btn.size = Vector2(sz, sz)
+	StyleScript.style_button(btn, false)
+	# Round, no border to feel like a chevron control
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = StyleScript.PANEL
+	sb.border_color = StyleScript.PANEL_BORDER
+	sb.set_border_width_all(1)
+	var rr := int(sz * 0.5)
+	sb.corner_radius_top_left = rr
+	sb.corner_radius_top_right = rr
+	sb.corner_radius_bottom_left = rr
+	sb.corner_radius_bottom_right = rr
+	btn.add_theme_stylebox_override("normal", sb)
+	btn.pressed.connect(callback)
+	btn.focus_mode = Control.FOCUS_NONE
+	var glyph := Control.new()
+	glyph.size = btn.size
+	glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	glyph.set_meta("icon", icon_name)
+	glyph.draw.connect(func():
+		var name: String = glyph.get_meta("icon", "next")
+		var icon_n: String = "back" if name == "prev" else "next"
+		IconScript.draw(glyph, icon_n, glyph.size * 0.5, glyph.size.x * 0.7, StyleScript.TEXT)
+	)
+	btn.add_child(glyph)
+	return btn
 
 func _icon_btn(icon_name: String, pos: Vector2, sz: float, callback: Callable) -> Button:
 	var btn := Button.new()
