@@ -48,18 +48,22 @@ func _ready():
 	set_process(true)
 
 # Builds a button where the (icon + text) group is centered as one unit.
+# Caller MUST set btn.size before the button enters the tree — the layout
+# pass that positions the icon + sets content margins runs deferred to
+# the next frame, after add_child().
 func _make_icon_button(label_text: String, icon_name: String, font_size: int, icon_color: Color, primary: bool) -> Button:
 	var btn := Button.new()
 	btn.text = label_text
 	btn.add_theme_font_size_override("font_size", font_size)
 	StyleScript.style_button(btn, primary)
-	btn.alignment = HORIZONTAL_ALIGNMENT_LEFT   # text anchored left; we shift via padding
+	btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	btn.focus_mode = Control.FOCUS_NONE
 
 	var icon_size: int = max(20, font_size + 4)
 	var gap: float = 10.0
 
 	var icon_ctl := Control.new()
+	icon_ctl.name = "IconGlyph"
 	icon_ctl.size = Vector2(icon_size, icon_size)
 	icon_ctl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	icon_ctl.set_meta("ic_name", icon_name)
@@ -71,21 +75,64 @@ func _make_icon_button(label_text: String, icon_name: String, font_size: int, ic
 	)
 	btn.add_child(icon_ctl)
 
-	var layout = func():
-		var font := ThemeDB.fallback_font
-		var text_w: float = font.get_string_size(label_text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
-		var group_w: float = float(icon_size) + gap + text_w
-		var group_x: float = (btn.size.x - group_w) * 0.5
-		icon_ctl.position = Vector2(group_x, (btn.size.y - float(icon_size)) * 0.5)
-		# Push the text so it sits right after the icon+gap
-		for state in ["normal", "hover", "pressed", "disabled"]:
-			var sb: StyleBoxFlat = btn.get_theme_stylebox(state)
-			if sb:
-				sb.content_margin_left = group_x + float(icon_size) + gap
-				sb.content_margin_right = group_x  # mirror so visuals stay balanced
-	btn.resized.connect(layout)
-	layout.call()
+	# Store layout metadata on the button for the deferred layout pass
+	btn.set_meta("ic_label", label_text)
+	btn.set_meta("ic_font_size", font_size)
+	btn.set_meta("ic_size", icon_size)
+	btn.set_meta("ic_gap", gap)
+	btn.set_meta("ic_primary", primary)
+
+	# Run layout on resize AND on the next idle frame (so size is set)
+	btn.resized.connect(_layout_icon_button.bind(btn))
+	_layout_icon_button.call_deferred(btn)
 	return btn
+
+# Centers the (icon + text) group inside the button. Rebuilds the styleboxes
+# with fresh content margins so Godot definitely re-lays out the text.
+func _layout_icon_button(btn: Button) -> void:
+	if not is_instance_valid(btn) or btn.size.x <= 1.0:
+		return
+	var label_text: String = btn.get_meta("ic_label", "")
+	var font_size: int = btn.get_meta("ic_font_size", 16)
+	var icon_size: int = btn.get_meta("ic_size", 22)
+	var gap: float = btn.get_meta("ic_gap", 10.0)
+	var primary: bool = btn.get_meta("ic_primary", false)
+
+	var font := ThemeDB.fallback_font
+	var text_w: float = font.get_string_size(label_text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	var group_w: float = float(icon_size) + gap + text_w
+	var group_x: float = (btn.size.x - group_w) * 0.5
+	if group_x < 8.0:
+		group_x = 8.0
+	var icon_ctl := btn.get_node_or_null("IconGlyph") as Control
+	if icon_ctl:
+		icon_ctl.position = Vector2(group_x, (btn.size.y - float(icon_size)) * 0.5)
+
+	# Rebuild styleboxes so Godot picks up the new content margins
+	var text_left: float = group_x + float(icon_size) + gap
+	_set_button_margins(btn, primary, text_left, 16.0)
+
+func _set_button_margins(btn: Button, primary: bool, pad_left: float, pad_right: float) -> void:
+	# Build fresh styleboxes mirroring StyleScript.style_button, with our pads
+	var states_bg := {
+		"normal":   [StyleScript.BTN_BG, StyleScript.BTN_BORDER],
+		"hover":    [StyleScript.BTN_BG_HOVER, StyleScript.ACCENT],
+		"pressed":  [StyleScript.BTN_BG_PRESSED, StyleScript.BTN_BORDER],
+		"disabled": [Color("#1A1612"), Color("#252019")],
+	}
+	if primary:
+		states_bg["normal"]   = [StyleScript.ACCENT, StyleScript.ACCENT]
+		states_bg["hover"]    = [StyleScript.ACCENT_HI, StyleScript.ACCENT_HI]
+		states_bg["pressed"]  = [StyleScript.ACCENT_DIM, StyleScript.ACCENT]
+		states_bg["disabled"] = [Color("#1A1612"), Color("#252019")]
+	for state in states_bg.keys():
+		var pair: Array = states_bg[state]
+		var sb := StyleScript.make_button_style(pair[0], pair[1])
+		sb.content_margin_left = pad_left
+		sb.content_margin_right = pad_right
+		sb.content_margin_top = 10
+		sb.content_margin_bottom = 10
+		btn.add_theme_stylebox_override(state, sb)
 
 func _process(delta):
 	time_t += delta
