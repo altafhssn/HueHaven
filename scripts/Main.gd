@@ -237,20 +237,12 @@ func _draw():
 		StyleScript.draw_gradient_rect(self, tube_rect, glass_top, glass_bot, 18.0)
 
 		# Inner left highlight (vertical, like light reflecting off glass)
-		draw_rect(Rect2(tube_rect.position + Vector2(3, 8), Vector2(2, tube_rect.size.y - 16)),
+		draw_rect(Rect2(tube_rect.position + Vector2(4, 22), Vector2(2, tube_rect.size.y - 44)),
 			Color(1, 1, 1, 0.22))
 
 		# Inner right shadow (subtle)
-		draw_rect(Rect2(tube_rect.position + Vector2(tube_rect.size.x - 5, 8), Vector2(2, tube_rect.size.y - 16)),
+		draw_rect(Rect2(tube_rect.position + Vector2(tube_rect.size.x - 6, 22), Vector2(2, tube_rect.size.y - 44)),
 			Color(0, 0, 0, 0.18))
-
-		# Rounded top rim — a brighter band that suggests the vial's lip
-		draw_rect(Rect2(tube_rect.position + Vector2(4, 2), Vector2(tube_rect.size.x - 8, 3)),
-			Color(0.85, 0.95, 1.0, 0.30))
-
-		# Inner bottom shadow
-		draw_rect(Rect2(tube_rect.position + Vector2(4, tube_rect.size.y - 6), Vector2(tube_rect.size.x - 8, 4)),
-			StyleScript.TUBE_INNER_SHADOW)
 
 		# Outline — soft cyan-tinted border
 		var border_col := Color(0.50, 0.72, 0.88, 0.55)
