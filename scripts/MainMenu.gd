@@ -88,47 +88,110 @@ func _draw():
 	var font := ThemeDB.fallback_font
 	var subtitle := "a serene sorting puzzle"
 	var st_size := font.get_string_size(subtitle, HORIZONTAL_ALIGNMENT_LEFT, -1, 13)
-	draw_string(font, Vector2(viewport.x * 0.5 - st_size.x * 0.5, viewport.y * 0.46),
+	draw_string(font, Vector2(viewport.x * 0.5 - st_size.x * 0.5, viewport.y * 0.48),
 		subtitle, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, StyleScript.TEXT_MUTED)
 
-# Logo mark — three overlapping translucent color circles forming a triangle.
-# Represents color (hue) blending into harmony (haven).
+# Logo mark — rounded icon container with a glass dome holding three
+# translucent color spheres, ambient warm rim glow. iOS-icon proportions.
 func _draw_logo(viewport: Vector2):
 	var cx: float = viewport.x * 0.5
 	var cy: float = viewport.y * 0.22
-	var r: float = 38.0
-	var sep: float = r * 0.65  # how far each circle is from the center
+	var icon_size: float = 170.0
+	var icon_r: float = icon_size * 0.22  # squircle-ish radius
+	var pulse: float = 1.0 + 0.015 * sin(time_t * 1.0)
 
-	# Soft backplate glow
-	draw_circle(Vector2(cx, cy), r * 2.4, Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, 0.07))
-	draw_circle(Vector2(cx, cy), r * 1.7, Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, 0.06))
+	# ----- (1) Icon container — rounded square with dark navy gradient -----
+	# Outer soft shadow under the icon
+	for k in range(4):
+		var sh_rect := Rect2(
+			cx - icon_size * 0.5 - float(k),
+			cy - icon_size * 0.5 + float(k) * 2.0,
+			icon_size + float(k) * 2.0,
+			icon_size + float(k) * 2.0)
+		StyleScript.draw_rounded_rect(self, sh_rect, Color(0, 0, 0, 0.10), icon_r + float(k), true)
 
-	# Three circles at 120° apart (top, bottom-left, bottom-right)
+	var icon_rect := Rect2(cx - icon_size * 0.5, cy - icon_size * 0.5, icon_size, icon_size)
+	# Dark navy base
+	StyleScript.draw_rounded_rect(self, icon_rect, Color("#1A2238"), icon_r, true)
+	# Vertical gradient on top of the base for subtle depth
+	StyleScript.draw_gradient_rect(self, icon_rect, Color("#22304A"), Color("#0E1828"), icon_r)
+
+	# ----- (2) Warm ambient rim glow (orange light wrapping the inside edge) -----
+	# Top rim
+	for k in range(4):
+		var glow_y: float = cy - icon_size * 0.45 + float(k) * 6.0
+		var glow_alpha: float = 0.10 - float(k) * 0.02
+		draw_circle(Vector2(cx, glow_y), icon_size * 0.45,
+			Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, glow_alpha))
+	# Bottom rim
+	for k in range(4):
+		var glow_y2: float = cy + icon_size * 0.45 - float(k) * 6.0
+		var glow_alpha2: float = 0.08 - float(k) * 0.015
+		draw_circle(Vector2(cx, glow_y2), icon_size * 0.45,
+			Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, glow_alpha2))
+
+	# ----- (3) Glass dome — large translucent sphere in the center -----
+	var dome_r: float = icon_size * 0.40 * pulse
+	var dome_center := Vector2(cx, cy)
+	# Dome backdrop tint (very subtle warm wash inside)
+	draw_circle(dome_center, dome_r * 1.05,
+		Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, 0.08))
+	# Dome body — barely visible translucent glass
+	draw_circle(dome_center, dome_r, Color(1.0, 1.0, 1.0, 0.04))
+	# Subtle outer ring (glass edge)
+	for k in range(2):
+		draw_arc(dome_center, dome_r - float(k), 0, TAU, 64,
+			Color(1, 1, 1, 0.18 - float(k) * 0.08), 1.0)
+
+	# ----- (4) Three overlapping color spheres inside the dome -----
+	var ball_r: float = icon_size * 0.20
+	var sep: float = ball_r * 0.55
 	var positions := [
-		Vector2(cx, cy - sep),                              # top
-		Vector2(cx - sep * 0.866, cy + sep * 0.5),          # bottom-left
-		Vector2(cx + sep * 0.866, cy + sep * 0.5),          # bottom-right
+		Vector2(cx, cy - sep * 0.9),                          # top
+		Vector2(cx - sep * 0.92, cy + sep * 0.55),            # bottom-left
+		Vector2(cx + sep * 0.92, cy + sep * 0.55),            # bottom-right
 	]
 	var colors := [
-		Color("#ff8c5a"),  # warm orange (terracotta)
-		Color("#4f9fc8"),  # cool blue
-		Color("#7ac085"),  # soft green
+		Color("#FF8C5A"),  # warm coral (top)
+		Color("#7AB8C4"),  # pale teal (bottom-left)
+		Color("#7DBE82"),  # sage green (bottom-right)
 	]
-	# Animated tiny pulse — barely-there breathing
-	var pulse: float = 1.0 + 0.02 * sin(time_t * 1.0)
-
-	# Draw each circle in additive-style blending: outer halo, then body, then inner highlight
 	for i in range(3):
-		var c: Color = colors[i]
-		var p: Vector2 = positions[i]
-		var rr: float = r * pulse
-		# Outer halo
-		draw_circle(p, rr * 1.15, Color(c.r, c.g, c.b, 0.18))
-		# Body — translucent so where they overlap the colors mix visually
-		draw_circle(p, rr, Color(c.r, c.g, c.b, 0.72))
-		# Top highlight
-		draw_circle(p + Vector2(-rr * 0.30, -rr * 0.32), rr * 0.32, Color(1, 1, 1, 0.35))
-		draw_circle(p + Vector2(-rr * 0.30, -rr * 0.32), rr * 0.18, Color(1, 1, 1, 0.55))
+		_draw_logo_ball(positions[i], ball_r, colors[i])
+
+	# ----- (5) Bright top-left highlight on the glass dome -----
+	var hl_center := dome_center + Vector2(-dome_r * 0.45, -dome_r * 0.55)
+	draw_circle(hl_center, dome_r * 0.30, Color(1, 1, 1, 0.10))
+	draw_circle(hl_center, dome_r * 0.22, Color(1, 1, 1, 0.18))
+	draw_circle(hl_center, dome_r * 0.14, Color(1, 1, 1, 0.28))
+	draw_circle(hl_center, dome_r * 0.07, Color(1, 1, 1, 0.55))
+
+	# ----- (6) Tiny bottom-right secondary highlight -----
+	var hl2 := dome_center + Vector2(dome_r * 0.55, dome_r * 0.50)
+	draw_circle(hl2, dome_r * 0.10, Color(1, 1, 1, 0.10))
+
+	# ----- (7) Icon rounded-rect border (very subtle) -----
+	StyleScript.draw_rounded_rect(self, icon_rect,
+		Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, 0.18),
+		icon_r, false, 1.5)
+
+func _draw_logo_ball(center: Vector2, r: float, color: Color) -> void:
+	# Translucent body — colors mix visually where they overlap
+	var edge_col := color.darkened(0.40)
+	edge_col.a = 0.75
+	draw_circle(center, r + 0.5, edge_col)
+	var body := color
+	body.a = 0.80
+	draw_circle(center, r, body)
+	var core := color.lightened(0.20)
+	core.a = 0.45
+	draw_circle(center + Vector2(0, r * 0.06), r * 0.78, core)
+	# Top-left highlight
+	var hl := center + Vector2(-r * 0.32, -r * 0.36)
+	draw_circle(hl, r * 0.48, Color(1, 1, 1, 0.10))
+	draw_circle(hl, r * 0.32, Color(1, 1, 1, 0.30))
+	draw_circle(hl, r * 0.18, Color(1, 1, 1, 0.55))
+	draw_circle(hl, r * 0.08, Color(1, 1, 1, 0.85))
 
 func _draw_title(viewport: Vector2):
 	var font := ThemeDB.fallback_font
@@ -140,7 +203,7 @@ func _draw_title(viewport: Vector2):
 	var haven_w: Vector2 = font.get_string_size(haven, HORIZONTAL_ALIGNMENT_LEFT, -1, title_size)
 	var total_w: float = hue_w.x + haven_w.x
 	var x0: float = viewport.x * 0.5 - total_w * 0.5
-	var y: float = viewport.y * 0.40
+	var y: float = viewport.y * 0.42
 	# Soft glow underneath the whole title
 	draw_string_outline(font, Vector2(x0, y), hue, HORIZONTAL_ALIGNMENT_LEFT, -1, title_size, 8,
 		Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, 0.25))
