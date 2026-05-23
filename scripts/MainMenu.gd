@@ -116,19 +116,21 @@ func _draw_logo(viewport: Vector2):
 	# Vertical gradient on top of the base for subtle depth
 	StyleScript.draw_gradient_rect(self, icon_rect, Color("#22304A"), Color("#0E1828"), icon_r)
 
-	# ----- (2) Warm ambient rim glow (orange light wrapping the inside edge) -----
-	# Top rim
-	for k in range(4):
-		var glow_y: float = cy - icon_size * 0.45 + float(k) * 6.0
-		var glow_alpha: float = 0.10 - float(k) * 0.02
-		draw_circle(Vector2(cx, glow_y), icon_size * 0.45,
-			Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, glow_alpha))
-	# Bottom rim
-	for k in range(4):
-		var glow_y2: float = cy + icon_size * 0.45 - float(k) * 6.0
-		var glow_alpha2: float = 0.08 - float(k) * 0.015
-		draw_circle(Vector2(cx, glow_y2), icon_size * 0.45,
-			Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, glow_alpha2))
+	# ----- (2) Warm ambient rim glow (contained inside the icon) -----
+	# Top half — accent fading downward to transparent. The gradient strip
+	# tapers at the icon corners thanks to draw_gradient_rect's corner-aware
+	# fill, so the glow naturally hugs the rounded top.
+	var top_glow := Rect2(icon_rect.position.x, icon_rect.position.y, icon_size, icon_size * 0.55)
+	StyleScript.draw_gradient_rect(self, top_glow,
+		Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, 0.22),
+		Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, 0.0),
+		icon_r)
+	# Bottom half — accent fading upward
+	var bot_glow := Rect2(icon_rect.position.x, cy + icon_size * 0.0, icon_size, icon_size * 0.5)
+	StyleScript.draw_gradient_rect(self, bot_glow,
+		Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, 0.0),
+		Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, 0.18),
+		icon_r)
 
 	# ----- (3) Glass dome — large translucent sphere in the center -----
 	var dome_r: float = icon_size * 0.40 * pulse
