@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add *)",
+      "Bash(git commit -m 'Underwater theme: deep teal bg, god rays, drifting bubbles, glass-vial tubes *)",
+      "Bash(git -C \"C:\\\\Users\\\\altaf\\\\OneDrive\\\\Documents\\\\HueHaven\" merge claude/hungry-perlman-a89ef0 --no-ff -m \"Merge: underwater theme\")"
+    ]
+  }
+}

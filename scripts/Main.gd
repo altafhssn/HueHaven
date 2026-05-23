@@ -222,31 +222,39 @@ func _draw():
 		var tube_x = grid_offset.x + i * (tube_width + _tube_gap) + shake_x
 		var tube_rect = Rect2(tube_x, grid_offset.y, tube_width, tube_height)
 
-		# Selected: soft outer accent glow (rendered first, behind tube)
+		# Selected: cyan glow behind the glass vial
 		if selected_tube == i:
-			for k in range(3):
-				var grow := tube_rect.grow(4.0 + float(k) * 3.0)
-				var a := 0.18 / float(k + 1)
-				draw_rounded_rect(grow, Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, a), 14 + k * 3, true)
+			for k in range(4):
+				var grow := tube_rect.grow(4.0 + float(k) * 4.0)
+				var a := 0.20 / float(k + 1)
+				draw_rounded_rect(grow, Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, a), 18 + k * 4, true)
 
-		# Tube body — flat warm dark fill, very subtle gradient
-		var bg_top = StyleScript.TUBE_BG_HI
-		var bg_bot = StyleScript.TUBE_BG
-		StyleScript.draw_gradient_rect(self, tube_rect, bg_top, bg_bot, 14.0)
+		# Glass vial body — translucent so the underwater background shows through
+		var glass_top := Color(0.55, 0.78, 0.92, 0.18)
+		var glass_bot := Color(0.30, 0.50, 0.70, 0.10)
+		StyleScript.draw_gradient_rect(self, tube_rect, glass_top, glass_bot, 18.0)
 
-		# Inner top highlight — single thin warm line, very subtle
-		draw_rect(Rect2(tube_rect.position + Vector2(4, 4), Vector2(tube_rect.size.x - 8, 1)),
-			Color(0.95, 0.85, 0.70, 0.10))
+		# Inner left highlight (vertical, like light reflecting off glass)
+		draw_rect(Rect2(tube_rect.position + Vector2(3, 8), Vector2(2, tube_rect.size.y - 16)),
+			Color(1, 1, 1, 0.22))
 
-		# Inner bottom shadow — deepens the floor
+		# Inner right shadow (subtle)
+		draw_rect(Rect2(tube_rect.position + Vector2(tube_rect.size.x - 5, 8), Vector2(2, tube_rect.size.y - 16)),
+			Color(0, 0, 0, 0.18))
+
+		# Rounded top rim — a brighter band that suggests the vial's lip
+		draw_rect(Rect2(tube_rect.position + Vector2(4, 2), Vector2(tube_rect.size.x - 8, 3)),
+			Color(0.85, 0.95, 1.0, 0.30))
+
+		# Inner bottom shadow
 		draw_rect(Rect2(tube_rect.position + Vector2(4, tube_rect.size.y - 6), Vector2(tube_rect.size.x - 8, 4)),
 			StyleScript.TUBE_INNER_SHADOW)
 
-		# Outline — very subtle warm border
-		var border_col = StyleScript.TUBE_BORDER
+		# Outline — soft cyan-tinted border
+		var border_col := Color(0.50, 0.72, 0.88, 0.55)
 		if selected_tube == i:
 			border_col = StyleScript.ACCENT
-		draw_rounded_rect(tube_rect, border_col, 14, false, 1.0)
+		draw_rounded_rect(tube_rect, border_col, 18, false, 1.5)
 		
 		# Draw balls in tube (bottom to top).
 		# When a move is animating, the source tube's top ball is the one
@@ -268,11 +276,12 @@ func _draw():
 
 			_draw_ball(Vector2(tube_x + tube_width / 2, y_pos + lift_offset), ball_entry)
 		
-		# Empty slots indicator — soft dot
+		# Empty slots indicator — soft cyan dot
 		for e in range(capacity - draw_count):
 			var slot_y = grid_offset.y + tube_height - (draw_count + e + 1) * (ball_radius * 2 + 2)
 			var center = Vector2(tube_x + tube_width / 2, slot_y)
-			draw_circle(center, ball_radius * 0.4, Color(1, 1, 1, 0.06))
+			draw_circle(center, ball_radius * 0.42, Color(0.55, 0.78, 0.92, 0.18))
+			draw_circle(center, ball_radius * 0.42, Color(0.55, 0.78, 0.92, 0.10), false, 1.0)
 
 		# Sparkle effect for completed tubes
 		if sparkle_tubes.has(i):

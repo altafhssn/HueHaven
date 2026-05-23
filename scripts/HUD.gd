@@ -52,14 +52,16 @@ func _setup_hud():
 	settings_button = _make_icon_button("⚙", Vector2(vp.x - 52, 14), 38, _on_open_settings)
 	add_child(settings_button)
 
-	# Level name (centered, top)
+	# Level name (centered, top) — bold, uppercase, letter-spaced
 	level_name_label = Label.new()
 	level_name_label.name = "LevelNameLabel"
-	level_name_label.add_theme_font_size_override("font_size", 17)
+	level_name_label.add_theme_font_size_override("font_size", 22)
 	level_name_label.add_theme_color_override("font_color", StyleScript.TEXT)
+	level_name_label.add_theme_constant_override("outline_size", 6)
+	level_name_label.add_theme_color_override("font_outline_color", Color(0.5, 0.78, 0.92, 0.35))
 	level_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	level_name_label.position = Vector2(0, 22)
-	level_name_label.size = Vector2(vp.x, 22)
+	level_name_label.position = Vector2(0, 18)
+	level_name_label.size = Vector2(vp.x, 28)
 	add_child(level_name_label)
 
 	# Moves chip — pill, centered just below level name
@@ -297,9 +299,9 @@ func _process(_delta):
 	else:
 		move_label.text = str(state.move_count) + " moves"
 
-	# Update level name
+	# Update level name (uppercase for impact, like the reference)
 	if level_name_label:
-		level_name_label.text = main_ref.get_current_level_name()
+		level_name_label.text = main_ref.get_current_level_name().to_upper()
 
 func show_win(stars: int, pack_info: Dictionary):
 	if win_overlay.visible:
