@@ -44,45 +44,84 @@ func _ready():
 func _setup_hud():
 	var vp: Vector2 = get_viewport().get_visible_rect().size
 
-	# Level name (centered, top)
-	level_name_label = Label.new()
-	level_name_label.name = "LevelNameLabel"
-	level_name_label.add_theme_font_size_override("font_size", 18)
-	level_name_label.add_theme_color_override("font_color", StyleScript.TEXT)
-	level_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	level_name_label.position = Vector2(0, 22)
-	level_name_label.size = Vector2(vp.x, 24)
-	add_child(level_name_label)
-
-	# Move counter (centered, just under level name)
-	move_label = Label.new()
-	move_label.text = "0 moves"
-	move_label.add_theme_font_size_override("font_size", 12)
-	move_label.add_theme_color_override("font_color", StyleScript.TEXT_MUTED)
-	move_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	move_label.position = Vector2(0, 48)
-	move_label.size = Vector2(vp.x, 18)
-	add_child(move_label)
-
 	# Menu button (top-left)
-	menu_button = _make_icon_button("←", Vector2(12, 16), 40, _on_menu)
+	menu_button = _make_icon_button("←", Vector2(14, 14), 38, _on_menu)
 	add_child(menu_button)
 
 	# Settings button (top-right)
-	settings_button = _make_icon_button("⚙", Vector2(vp.x - 52, 16), 40, _on_open_settings)
+	settings_button = _make_icon_button("⚙", Vector2(vp.x - 52, 14), 38, _on_open_settings)
 	add_child(settings_button)
 
-	# Bottom toolbar (Undo / Restart / Hint)
-	var toolbar_y = vp.y - 76
-	var btn_w = 100.0
-	var gap = 12.0
-	var total = btn_w * 3 + gap * 2
-	var start_x = (vp.x - total) / 2
-	undo_button = _make_text_button("↺  Undo", Vector2(start_x, toolbar_y), btn_w, 48, _on_undo)
+	# Level name (centered, top)
+	level_name_label = Label.new()
+	level_name_label.name = "LevelNameLabel"
+	level_name_label.add_theme_font_size_override("font_size", 17)
+	level_name_label.add_theme_color_override("font_color", StyleScript.TEXT)
+	level_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	level_name_label.position = Vector2(0, 22)
+	level_name_label.size = Vector2(vp.x, 22)
+	add_child(level_name_label)
+
+	# Moves chip — pill background, centered just below level name
+	var chip := Panel.new()
+	chip.name = "MovesChip"
+	chip.size = Vector2(110, 28)
+	chip.position = Vector2((vp.x - 110) / 2, 52)
+	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var chip_style := StyleBoxFlat.new()
+	chip_style.bg_color = StyleScript.PANEL
+	chip_style.border_color = StyleScript.PANEL_BORDER
+	chip_style.set_border_width_all(1)
+	chip_style.corner_radius_top_left = 14
+	chip_style.corner_radius_top_right = 14
+	chip_style.corner_radius_bottom_left = 14
+	chip_style.corner_radius_bottom_right = 14
+	chip.add_theme_stylebox_override("panel", chip_style)
+	add_child(chip)
+
+	move_label = Label.new()
+	move_label.text = "0 moves"
+	move_label.add_theme_font_size_override("font_size", 12)
+	move_label.add_theme_color_override("font_color", StyleScript.TEXT)
+	move_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	move_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	move_label.position = Vector2((vp.x - 110) / 2, 52)
+	move_label.size = Vector2(110, 28)
+	move_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(move_label)
+
+	# Bottom action bar with its own panel background
+	var bar_h: float = 96.0
+	var bar := Panel.new()
+	bar.name = "ActionBar"
+	bar.size = Vector2(vp.x, bar_h)
+	bar.position = Vector2(0, vp.y - bar_h)
+	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var bar_style := StyleBoxFlat.new()
+	bar_style.bg_color = StyleScript.PANEL
+	bar_style.border_color = StyleScript.PANEL_BORDER
+	bar_style.border_width_top = 1
+	bar_style.shadow_color = Color(0.18, 0.13, 0.07, 0.10)
+	bar_style.shadow_size = 6
+	bar_style.shadow_offset = Vector2(0, -2)
+	bar.add_theme_stylebox_override("panel", bar_style)
+	add_child(bar)
+
+	# Three primary actions, vertically centered in the bar
+	var btn_w: float = 116.0
+	var btn_h: float = 50.0
+	var gap: float = 14.0
+	var total: float = btn_w * 3 + gap * 2
+	var start_x: float = (vp.x - total) / 2
+	var btn_y: float = vp.y - bar_h + (bar_h - btn_h) / 2
+
+	undo_button = _make_text_button("↺  Undo", Vector2(start_x, btn_y), btn_w, btn_h, _on_undo)
 	add_child(undo_button)
-	hint_button = _make_text_button("?  Hint", Vector2(start_x + btn_w + gap, toolbar_y), btn_w, 48, _on_hint)
+	hint_button = _make_text_button("?  Hint", Vector2(start_x + btn_w + gap, btn_y), btn_w, btn_h, _on_hint)
+	# Hint is the highlighted action — primary style
+	StyleScript.style_button(hint_button, true)
 	add_child(hint_button)
-	restart_button = _make_text_button("↻  Restart", Vector2(start_x + (btn_w + gap) * 2, toolbar_y), btn_w, 48, _on_restart)
+	restart_button = _make_text_button("↻  Restart", Vector2(start_x + (btn_w + gap) * 2, btn_y), btn_w, btn_h, _on_restart)
 	add_child(restart_button)
 	
 	# --- Win overlay: dim + centered card ---

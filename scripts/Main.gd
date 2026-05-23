@@ -160,24 +160,42 @@ func _load_generated_level(idx: int):
 	queue_redraw()
 
 func _calc_grid_offset(level_data) -> Vector2:
-	var n_tubes = level_data.contents.size()
-	# Scale tube/ball size down for crowded levels so they fit within the viewport.
-	var margin = 24.0
-	var gap = 12.0
-	var available = viewport_size.x - margin * 2
-	var max_tube_w = (available - gap * (n_tubes - 1)) / n_tubes
-	tube_width = clamp(max_tube_w, 24.0, 48.0)
-	# If still too narrow, shrink the gap
-	if max_tube_w < 24.0:
-		gap = max(2.0, (available - 24.0 * n_tubes) / max(1, n_tubes - 1))
-		tube_width = 24.0
-	ball_radius = clamp(tube_width * 0.42, 8.0, 18.0)
-	tube_height = (ball_radius * 2 + 2) * level_data.capacity + 12
+	var n_tubes: int = level_data.contents.size()
+	var capacity: int = int(level_data.capacity)
+
+	# Define the game zone — between the top chrome (header + chip row) and
+	# the bottom action bar. Tubes are centered vertically within this zone.
+	var top_chrome: float = 96.0   # back + title + moves chip
+	var bottom_chrome: float = 104.0  # action bar height + a hair of padding
+	var side_margin: float = 16.0
+	var zone_top: float = top_chrome
+	var zone_h: float = viewport_size.y - top_chrome - bottom_chrome
+
+	# Width-constrained tube width
+	var gap: float = 14.0
+	var avail_w: float = viewport_size.x - side_margin * 2
+	var max_tube_w_by_width: float = (avail_w - gap * float(n_tubes - 1)) / float(n_tubes)
+	# Height-constrained ball radius (tube height ≤ ~85% of game zone)
+	var max_tube_h: float = zone_h * 0.88
+	var max_ball_r_by_height: float = (max_tube_h - 16.0) / (float(capacity) * 2.0 + float(capacity - 1) * 0.1)
+
+	# Tube width should accommodate a comfortable ball — pick larger of constraints
+	tube_width = clamp(max_tube_w_by_width, 32.0, 92.0)
+	if max_tube_w_by_width < 32.0:
+		gap = max(4.0, (avail_w - 32.0 * float(n_tubes)) / float(max(1, n_tubes - 1)))
+		tube_width = 32.0
+
+	# Ball radius constrained by both tube width and tube height
+	var ball_r_by_width: float = tube_width * 0.44
+	ball_radius = clamp(min(ball_r_by_width, max_ball_r_by_height), 12.0, 42.0)
+	tube_height = (ball_radius * 2.0 + 4.0) * float(capacity) + 18.0
 	_tube_gap = gap
 
-	var total_width = n_tubes * (tube_width + gap) - gap
-	var start_x = (viewport_size.x - total_width) / 2
-	return Vector2(start_x, 180)
+	var total_width: float = float(n_tubes) * (tube_width + gap) - gap
+	var start_x: float = (viewport_size.x - total_width) / 2.0
+	# Vertically center the tubes within the game zone
+	var start_y: float = zone_top + (zone_h - tube_height) / 2.0
+	return Vector2(start_x, start_y)
 
 func _draw():
 	if is_showing_level_select:
@@ -193,7 +211,22 @@ func _draw():
 	
 	# Atmospheric background
 	StyleScript.draw_background(self, viewport_size)
-	StyleScript.draw_stars(self, viewport_size, 11)
+
+	# Soft stage backdrop behind the tubes — gives the play area weight
+	var stage_pad_x: float = 12.0
+	var stage_pad_y: float = 18.0
+	var stage_rect = Rect2(
+		grid_offset.x - stage_pad_x,
+		grid_offset.y - stage_pad_y,
+		n_tubes * (tube_width + _tube_gap) - _tube_gap + stage_pad_x * 2,
+		tube_height + stage_pad_y * 2
+	)
+	# Drop shadow
+	draw_rounded_rect(Rect2(stage_rect.position + Vector2(0, 4), stage_rect.size),
+		Color(0.18, 0.13, 0.07, 0.06), 18, true)
+	# Stage fill (slightly darker than bg for contrast)
+	draw_rounded_rect(stage_rect, Color(0.95, 0.91, 0.81, 0.5), 18, true)
+	draw_rounded_rect(stage_rect, StyleScript.PANEL_BORDER, 18, false, 1.0)
 
 	# Draw each tube
 	for i in range(n_tubes):
