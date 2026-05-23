@@ -38,8 +38,22 @@ const HAPTICS: Dictionary = {
 var muted: bool = false
 var haptics_enabled: bool = true
 
-# Optional: name -> AudioStream. If set, will be played via a transient player.
+# event_name -> AudioStream. Auto-populated in _ready by scanning the sfx folder.
 var streams: Dictionary = {}
+
+const SFX_DIR := "res://assets/audio/sfx/"
+
+func _ready() -> void:
+	# Auto-load any file in the sfx folder whose name (without extension)
+	# matches one of the registered EVENTS. Supports .wav and .ogg.
+	for ev in EVENTS:
+		for ext in [".ogg", ".wav"]:
+			var path := SFX_DIR + ev + ext
+			if ResourceLoader.exists(path):
+				var stream := load(path)
+				if stream is AudioStream:
+					streams[ev] = stream
+					break
 
 func play(event: String) -> void:
 	# Haptic pulse — fires regardless of mute (audio + vibration are separate concerns)
