@@ -20,42 +20,18 @@ func _ready():
 	size = viewport
 	mouse_filter = Control.MOUSE_FILTER_PASS
 
-	# Play button (primary, with play-icon)
-	var play_btn := Button.new()
-	play_btn.text = "    Play"
-	play_btn.add_theme_font_size_override("font_size", 22)
-	StyleScript.style_button(play_btn, true)
+	# Play button — primary, icon properly aligned with centered text
+	var play_btn := _make_icon_button("Play", "play", 19, Color("#1a1208"), true)
 	play_btn.size = Vector2(240, 60)
 	play_btn.position = Vector2((viewport.x - 240) / 2, viewport.y * 0.58)
 	play_btn.pressed.connect(_on_play)
-	play_btn.focus_mode = Control.FOCUS_NONE
-	var play_icon := Control.new()
-	play_icon.position = Vector2(16, (60 - 26) * 0.5)
-	play_icon.size = Vector2(26, 26)
-	play_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	play_icon.draw.connect(func():
-		IconScript.draw(play_icon, "play", play_icon.size * 0.5, 26, Color("#1a1208"))
-	)
-	play_btn.add_child(play_icon)
 	add_child(play_btn)
 
-	# Settings button (secondary)
-	var settings_btn := Button.new()
-	settings_btn.text = "    Settings"
-	settings_btn.add_theme_font_size_override("font_size", 16)
-	StyleScript.style_button(settings_btn, false)
-	settings_btn.size = Vector2(180, 46)
-	settings_btn.position = Vector2((viewport.x - 180) / 2, viewport.y * 0.58 + 80)
+	# Settings button — secondary
+	var settings_btn := _make_icon_button("Settings", "settings", 16, StyleScript.TEXT, false)
+	settings_btn.size = Vector2(180, 48)
+	settings_btn.position = Vector2((viewport.x - 180) / 2, viewport.y * 0.58 + 76)
 	settings_btn.pressed.connect(_on_settings)
-	settings_btn.focus_mode = Control.FOCUS_NONE
-	var set_icon := Control.new()
-	set_icon.position = Vector2(14, (46 - 22) * 0.5)
-	set_icon.size = Vector2(22, 22)
-	set_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	set_icon.draw.connect(func():
-		IconScript.draw(set_icon, "settings", set_icon.size * 0.5, 22, StyleScript.TEXT)
-	)
-	settings_btn.add_child(set_icon)
 	add_child(settings_btn)
 
 	# Stats text — total stars / level progress
@@ -63,13 +39,53 @@ func _ready():
 	var unlocked: int = progression.get_highest_unlocked()
 	for i in range(unlocked + 1):
 		total_stars += progression.get_stars(i)
-	var stats_text := str(total_stars) + " stars  ·  Level " + str(unlocked + 1) + " of " + str(LevelGeneratorScript.get_total_levels())
+	var stats_text := str(total_stars) + " stars   ·   Level " + str(unlocked + 1) + " of " + str(LevelGeneratorScript.get_total_levels())
 	var stats_lbl := StyleScript.make_label(
-		stats_text, 13, StyleScript.TEXT_MUTED,
-		Vector2(0, viewport.y * 0.58 + 144), Vector2(viewport.x, 24))
+		stats_text, 14, StyleScript.TEXT_MUTED,
+		Vector2(0, viewport.y * 0.58 + 142), Vector2(viewport.x, 22))
 	add_child(stats_lbl)
 
 	set_process(true)
+
+# Builds a button where the (icon + text) group is centered as one unit.
+func _make_icon_button(label_text: String, icon_name: String, font_size: int, icon_color: Color, primary: bool) -> Button:
+	var btn := Button.new()
+	btn.text = label_text
+	btn.add_theme_font_size_override("font_size", font_size)
+	StyleScript.style_button(btn, primary)
+	btn.alignment = HORIZONTAL_ALIGNMENT_LEFT   # text anchored left; we shift via padding
+	btn.focus_mode = Control.FOCUS_NONE
+
+	var icon_size: int = max(20, font_size + 4)
+	var gap: float = 10.0
+
+	var icon_ctl := Control.new()
+	icon_ctl.size = Vector2(icon_size, icon_size)
+	icon_ctl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icon_ctl.set_meta("ic_name", icon_name)
+	icon_ctl.set_meta("ic_color", icon_color)
+	icon_ctl.set_meta("ic_size", icon_size)
+	icon_ctl.draw.connect(func():
+		IconScript.draw(icon_ctl, icon_ctl.get_meta("ic_name"),
+			icon_ctl.size * 0.5, icon_ctl.get_meta("ic_size"), icon_ctl.get_meta("ic_color"))
+	)
+	btn.add_child(icon_ctl)
+
+	var layout = func():
+		var font := ThemeDB.fallback_font
+		var text_w: float = font.get_string_size(label_text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+		var group_w: float = float(icon_size) + gap + text_w
+		var group_x: float = (btn.size.x - group_w) * 0.5
+		icon_ctl.position = Vector2(group_x, (btn.size.y - float(icon_size)) * 0.5)
+		# Push the text so it sits right after the icon+gap
+		for state in ["normal", "hover", "pressed", "disabled"]:
+			var sb: StyleBoxFlat = btn.get_theme_stylebox(state)
+			if sb:
+				sb.content_margin_left = group_x + float(icon_size) + gap
+				sb.content_margin_right = group_x  # mirror so visuals stay balanced
+	btn.resized.connect(layout)
+	layout.call()
+	return btn
 
 func _process(delta):
 	time_t += delta
@@ -86,10 +102,11 @@ func _draw():
 
 	# Subtitle
 	var font := ThemeDB.fallback_font
-	var subtitle := "a serene sorting puzzle"
-	var st_size := font.get_string_size(subtitle, HORIZONTAL_ALIGNMENT_LEFT, -1, 13)
+	var subtitle := "A serene sorting puzzle"
+	var sub_size: int = 14
+	var st_size := font.get_string_size(subtitle, HORIZONTAL_ALIGNMENT_LEFT, -1, sub_size)
 	draw_string(font, Vector2(viewport.x * 0.5 - st_size.x * 0.5, viewport.y * 0.48),
-		subtitle, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, StyleScript.TEXT_MUTED)
+		subtitle, HORIZONTAL_ALIGNMENT_LEFT, -1, sub_size, StyleScript.TEXT_MUTED)
 
 # Logo mark — apothecary test tube with four stacked glass balls inside,
 # warm rim glow inside a dark rounded squircle. Game-referenced.

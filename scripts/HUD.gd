@@ -276,27 +276,45 @@ func _card_style() -> StyleBoxFlat:
 
 func _make_action_button(icon_name: String, label_text: String, pos: Vector2, w: float, h: float, callback: Callable, primary: bool) -> Button:
 	var btn := Button.new()
-	btn.text = "    " + label_text  # leading space leaves room for icon
+	btn.text = label_text
 	btn.position = pos
 	btn.size = Vector2(w, h)
 	btn.add_theme_font_size_override("font_size", 15)
 	StyleScript.style_button(btn, primary)
+	btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	btn.pressed.connect(callback)
 	btn.focus_mode = Control.FOCUS_NONE
-	# Icon glyph on the left
-	var glyph := Control.new()
-	glyph.position = Vector2(12, (h - 22) * 0.5)
-	glyph.size = Vector2(22, 22)
-	glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var icon_size: int = 22
+	var gap: float = 8.0
 	var icon_col: Color = Color("#1a1208") if primary else StyleScript.TEXT
+
+	var glyph := Control.new()
+	glyph.size = Vector2(icon_size, icon_size)
+	glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	glyph.set_meta("icon_name", icon_name)
 	glyph.set_meta("icon_color", icon_col)
 	glyph.draw.connect(func():
-		var name: String = glyph.get_meta("icon_name", "")
-		var col: Color = glyph.get_meta("icon_color", Color.WHITE)
-		IconScript.draw(glyph, name, glyph.size * 0.5, 22, col)
+		var n: String = glyph.get_meta("icon_name", "")
+		var c: Color = glyph.get_meta("icon_color", Color.WHITE)
+		IconScript.draw(glyph, n, glyph.size * 0.5, icon_size, c)
 	)
 	btn.add_child(glyph)
+
+	# Layout: icon + label centered together as a single group
+	var layout = func():
+		var font := ThemeDB.fallback_font
+		var text_w: float = font.get_string_size(label_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
+		var group_w: float = float(icon_size) + gap + text_w
+		var group_x: float = (btn.size.x - group_w) * 0.5
+		glyph.position = Vector2(group_x, (btn.size.y - float(icon_size)) * 0.5)
+		for state in ["normal", "hover", "pressed", "disabled"]:
+			var sb: StyleBoxFlat = btn.get_theme_stylebox(state)
+			if sb:
+				sb.content_margin_left = group_x + float(icon_size) + gap
+				sb.content_margin_right = group_x
+	btn.resized.connect(layout)
+	layout.call()
 	return btn
 
 func _make_text_button(text: String, pos: Vector2, w: float, h: float, callback: Callable) -> Button:
