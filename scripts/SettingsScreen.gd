@@ -121,4 +121,5 @@ func _process(_delta):
 
 func _draw():
 	var viewport = get_viewport().get_visible_rect().size
-	StyleScript.draw_animated_background(self, viewport, Time.get_ticks_msec() / 1000.0)
+	StyleScript.draw_themed_background(self, viewport, Time.get_ticks_msec() / 1000.0,
+		StyleScript.THEME_UNDERWATER)

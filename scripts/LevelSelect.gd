@@ -221,4 +221,6 @@ func _process(_delta):
 
 func _draw():
 	var viewport = get_viewport().get_visible_rect().size
-	StyleScript.draw_animated_background(self, viewport, Time.get_ticks_msec() / 1000.0)
+	# Use the currently-selected pack's theme so background hints at what they're picking
+	StyleScript.draw_themed_background(self, viewport, Time.get_ticks_msec() / 1000.0,
+		StyleScript.theme_for_pack(current_pack_index))
