@@ -394,17 +394,42 @@ func _draw_ball(center: Vector2, ball_entry):
 	if color == Color.TRANSPARENT:
 		return
 
-	# Soft warm shadow
-	draw_circle(center + Vector2(1.5, 2.5), ball_radius, Color(0.18, 0.12, 0.06, 0.22))
-	# Subtle outer rim (darker version of color) for definition on cream bg
-	draw_circle(center, ball_radius + 0.5, color.darkened(0.18))
-	# Ball body
-	draw_circle(center, ball_radius, color)
-	# Soft top highlight (glass)
-	var highlight_center = center + Vector2(-ball_radius * 0.32, -ball_radius * 0.32)
-	draw_circle(highlight_center, ball_radius * 0.38, Color(1, 1, 1, 0.32))
-	# Tiny specular dot
-	draw_circle(highlight_center + Vector2(-ball_radius * 0.08, -ball_radius * 0.08), ball_radius * 0.12, Color(1, 1, 1, 0.6))
+	# Glossy marble draw — layered to approximate a 3D plastic sphere.
+	# (1) Soft cast shadow underneath
+	draw_circle(center + Vector2(0.5, ball_radius * 0.18), ball_radius * 1.05, Color(0.05, 0.04, 0.02, 0.18))
+	draw_circle(center + Vector2(0.5, ball_radius * 0.22), ball_radius * 0.95, Color(0.05, 0.04, 0.02, 0.12))
+
+	# (2) Outer dark rim (a darker shade of body color) — definition on light bg
+	draw_circle(center, ball_radius + 0.6, color.darkened(0.32))
+
+	# (3) Body color — slightly darker, the bottom-up gradient adds brightness later
+	draw_circle(center, ball_radius, color.darkened(0.08))
+
+	# (4) Bottom rim light — lighter band at the bottom (like a marble lit from below
+	#     reflecting off the surface). Stacked translucent circles offset downward.
+	var rim_col := color.lightened(0.45)
+	rim_col.a = 0.55
+	draw_circle(center + Vector2(0, ball_radius * 0.18), ball_radius * 0.85, rim_col)
+	rim_col.a = 0.45
+	draw_circle(center + Vector2(0, ball_radius * 0.28), ball_radius * 0.72, rim_col)
+
+	# (5) Re-cap with body color in the upper hemisphere (preserves color above)
+	#     Using a slightly faded body color on the top half
+	var top_body := color
+	top_body.a = 0.55
+	draw_circle(center + Vector2(0, -ball_radius * 0.18), ball_radius * 0.86, top_body)
+
+	# (6) Big soft top-left highlight (the main reflection) — multiple stacked
+	#     translucent white circles produce a soft falloff
+	var hl_center := center + Vector2(-ball_radius * 0.30, -ball_radius * 0.34)
+	draw_circle(hl_center, ball_radius * 0.55, Color(1, 1, 1, 0.18))
+	draw_circle(hl_center, ball_radius * 0.42, Color(1, 1, 1, 0.30))
+	draw_circle(hl_center, ball_radius * 0.30, Color(1, 1, 1, 0.45))
+	draw_circle(hl_center, ball_radius * 0.18, Color(1, 1, 1, 0.65))
+
+	# (7) Tiny bright specular dot inside the highlight
+	draw_circle(hl_center + Vector2(-ball_radius * 0.08, -ball_radius * 0.08),
+		ball_radius * 0.10, Color(1, 1, 1, 0.95))
 
 	# Color-blind shape marker
 	if colorblind and color_idx >= 0 and stype != "rainbow":
