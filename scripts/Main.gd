@@ -205,29 +205,33 @@ func _draw():
 		var tube_x = grid_offset.x + i * (tube_width + _tube_gap) + shake_x
 		var tube_rect = Rect2(tube_x, grid_offset.y, tube_width, tube_height)
 
-		# Tube body — gradient with subtle inner shadow
+		# Soft drop shadow under tube
+		var shadow_rect = Rect2(tube_rect.position + Vector2(2, 4), tube_rect.size)
+		draw_rounded_rect(shadow_rect, Color(0.18, 0.14, 0.08, 0.12), 12, true)
+
+		# Tube body — gradient cream → slightly darker
 		var bg_top = StyleScript.TUBE_BG_HI
 		var bg_bot = StyleScript.TUBE_BG
 		if selected_tube == i:
-			bg_top = Color("#2e2e5a")
-			bg_bot = Color("#1c1c38")
-		StyleScript.draw_gradient_rect(self, tube_rect, bg_top, bg_bot, 10.0)
+			bg_top = Color("#F2DCC6")
+			bg_bot = Color("#E5C8AB")
+		StyleScript.draw_gradient_rect(self, tube_rect, bg_top, bg_bot, 12.0)
 		# Inner top highlight (glass effect)
-		draw_rect(Rect2(tube_rect.position + Vector2(2, 2), Vector2(tube_rect.size.x - 4, 4)),
-			Color(1, 1, 1, 0.05))
+		draw_rect(Rect2(tube_rect.position + Vector2(3, 3), Vector2(tube_rect.size.x - 6, 3)),
+			Color(1, 1, 1, 0.45))
 		# Inner bottom shadow
-		draw_rect(Rect2(tube_rect.position + Vector2(2, tube_rect.size.y - 6), Vector2(tube_rect.size.x - 4, 4)),
+		draw_rect(Rect2(tube_rect.position + Vector2(3, tube_rect.size.y - 8), Vector2(tube_rect.size.x - 6, 4)),
 			StyleScript.TUBE_INNER_SHADOW)
 		# Outline
 		var border_col = StyleScript.TUBE_BORDER
 		if selected_tube == i:
 			border_col = StyleScript.ACCENT
-		draw_rounded_rect(tube_rect, border_col, 10, false, 1.5)
+		draw_rounded_rect(tube_rect, border_col, 12, false, 1.5)
 
 		if selected_tube == i:
-			# Outer glow ring
-			var glow_rect = tube_rect.grow(4)
-			draw_rounded_rect(glow_rect, Color("#e8d5a3", 0.4), 12, false, 2.0)
+			# Soft accent ring
+			var glow_rect = tube_rect.grow(3)
+			draw_rounded_rect(glow_rect, Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, 0.5), 14, false, 2.0)
 		
 		# Draw balls in tube (bottom to top)
 		var tube_contents = tubes[i]
@@ -244,25 +248,25 @@ func _draw():
 
 			_draw_ball(Vector2(tube_x + tube_width / 2, y_pos + lift_offset), ball_entry)
 		
-		# Empty slots indicator
+		# Empty slots indicator — soft dot
 		for e in range(capacity - n_balls):
 			var slot_y = grid_offset.y + tube_height - (n_balls + e + 1) * (ball_radius * 2 + 2)
 			var center = Vector2(tube_x + tube_width / 2, slot_y)
-			draw_circle(center, ball_radius * 0.5, Color("#2A2A4E", 0.3))
-		
+			draw_circle(center, ball_radius * 0.4, Color(0.5, 0.45, 0.35, 0.18))
+
 		# Sparkle effect for completed tubes
 		if sparkle_tubes.has(i):
 			var sparkle_alpha = abs(sin(Time.get_ticks_msec() * 0.004))
-			var glow_rect = tube_rect.grow(2)
-			draw_rounded_rect(glow_rect, Color("#e8d5a3", sparkle_alpha * 0.3), 8)
+			var glow_rect = tube_rect.grow(3)
+			draw_rounded_rect(glow_rect, Color(StyleScript.SUCCESS.r, StyleScript.SUCCESS.g, StyleScript.SUCCESS.b, sparkle_alpha * 0.5), 14, false, 2.0)
 
-		# Hint highlight: from tube (blue), to tube (green)
+		# Hint highlight: from (terracotta), to (sage)
 		if hint_timer > 0 and (i == hint_from or i == hint_to):
 			var pulse = abs(sin(Time.get_ticks_msec() * 0.008))
-			var hint_color = Color("#88ddff") if i == hint_from else Color("#88ff88")
-			hint_color.a = pulse * 0.7
+			var hint_color = StyleScript.ACCENT if i == hint_from else StyleScript.SUCCESS
+			hint_color = Color(hint_color.r, hint_color.g, hint_color.b, pulse * 0.8)
 			var hint_rect = tube_rect.grow(4)
-			draw_rounded_rect(hint_rect, hint_color, 10, false, 2.5)
+			draw_rounded_rect(hint_rect, hint_color, 14, false, 2.5)
 	
 	# Draw animation ball if moving
 	if move_animating and anim_ball != null:
@@ -341,7 +345,7 @@ func _draw_ball(center: Vector2, ball_entry):
 		var hue = fmod(Time.get_ticks_msec() * 0.0005, 1.0)
 		color = Color.from_hsv(hue, 0.7, 0.95)
 	elif stype == "stone":
-		color = Color("#5A5A6E")
+		color = Color("#7A7060")
 	elif color_idx >= 0:
 		color = BallColorsScript.get_color(color_idx)
 	else:
@@ -350,15 +354,17 @@ func _draw_ball(center: Vector2, ball_entry):
 	if color == Color.TRANSPARENT:
 		return
 
-	# Ball shadow
-	draw_circle(center + Vector2(2, 2), ball_radius, Color(0, 0, 0, 0.3))
+	# Soft warm shadow
+	draw_circle(center + Vector2(1.5, 2.5), ball_radius, Color(0.18, 0.12, 0.06, 0.22))
+	# Subtle outer rim (darker version of color) for definition on cream bg
+	draw_circle(center, ball_radius + 0.5, color.darkened(0.18))
 	# Ball body
 	draw_circle(center, ball_radius, color)
-	# Glossy highlight
-	var highlight_center = center + Vector2(-ball_radius * 0.3, -ball_radius * 0.3)
-	draw_circle(highlight_center, ball_radius * 0.35, Color(1, 1, 1, 0.25))
-	# Rim light
-	draw_arc(center, ball_radius - 1, 0, TAU, 16, Color(1, 1, 1, 0.1), 1.0)
+	# Soft top highlight (glass)
+	var highlight_center = center + Vector2(-ball_radius * 0.32, -ball_radius * 0.32)
+	draw_circle(highlight_center, ball_radius * 0.38, Color(1, 1, 1, 0.32))
+	# Tiny specular dot
+	draw_circle(highlight_center + Vector2(-ball_radius * 0.08, -ball_radius * 0.08), ball_radius * 0.12, Color(1, 1, 1, 0.6))
 
 	# Color-blind shape marker
 	if colorblind and color_idx >= 0 and stype != "rainbow":
@@ -369,7 +375,8 @@ func _draw_ball(center: Vector2, ball_entry):
 		_draw_special_overlay(center, ball_entry)
 
 func _draw_colorblind_marker(center: Vector2, color_idx: int):
-	var marker_color = Color(1, 1, 1, 0.85)
+	# Dark marker reads on both light and saturated balls
+	var marker_color = Color(0.1, 0.08, 0.05, 0.7)
 	var r = ball_radius * 0.45
 	match color_idx % 6:
 		0:  # circle

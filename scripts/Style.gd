@@ -1,34 +1,48 @@
 extends RefCounted
 
-# Centralized visual style — colors, fonts, builders for buttons / panels.
-# All UI screens import this so the look stays consistent.
+# Visual style — Claude-inspired warm/cream palette.
+# Centralized so every screen stays consistent.
 
-const BG_TOP := Color("#11112a")
-const BG_BOTTOM := Color("#06060f")
-const BG_SOLID := Color("#0D0D1A")
+# --- Background tones (warm cream paper) ---
+const BG_TOP := Color("#F7F3E8")
+const BG_BOTTOM := Color("#EBE4D0")
+const BG_SOLID := Color("#F5F1E8")
 
-const PANEL := Color("#181830")
-const PANEL_HI := Color("#22224a")
-const PANEL_BORDER := Color("#2e2e58")
+# --- Panels & cards ---
+const PANEL := Color("#EFE9D6")
+const PANEL_HI := Color("#E5DDC4")
+const PANEL_BORDER := Color("#D8CFB3")
+const PANEL_BORDER_HI := Color("#C2B58F")
 
-const ACCENT := Color("#e8d5a3")
-const ACCENT_DIM := Color("#a89a78")
-const ACCENT_GLOW := Color("#e8d5a3", 0.18)
+# --- Accent (Claude terracotta) ---
+const ACCENT := Color("#CC785C")
+const ACCENT_HI := Color("#D98B6F")
+const ACCENT_DIM := Color("#A6604A")
+const ACCENT_GLOW := Color("#CC785C", 0.18)
 
-const TEXT := Color("#e8d5a3")
-const TEXT_MUTED := Color("#7a7a96")
-const TEXT_DIM := Color("#4a4a66")
+# --- Text ---
+const TEXT := Color("#2D2A24")
+const TEXT_MUTED := Color("#8A8170")
+const TEXT_DIM := Color("#B5AC97")
 
-const STAR := Color("#FFD700")
-const DANGER := Color("#ff7a7a")
-const SUCCESS := Color("#9be38a")
+# --- Semantic ---
+const STAR := Color("#D9A949")        # warm gold, not neon yellow
+const DANGER := Color("#C5604D")
+const SUCCESS := Color("#7E9D62")
 
-const TUBE_BG := Color("#15152a")
-const TUBE_BG_HI := Color("#22224a")
-const TUBE_BORDER := Color("#2a2a4e")
-const TUBE_INNER_SHADOW := Color("#000000", 0.35)
+# --- Tubes (lighter, glass-on-paper) ---
+const TUBE_BG := Color("#E8DFC6")
+const TUBE_BG_HI := Color("#F1E9D3")
+const TUBE_BORDER := Color("#C2B58F")
+const TUBE_INNER_SHADOW := Color("#3B3528", 0.08)
 
-static func make_button_style(bg: Color, border: Color, radius := 8) -> StyleBoxFlat:
+# --- Buttons ---
+const BTN_BG := Color("#EFE9D6")
+const BTN_BG_HOVER := Color("#E0D6B8")
+const BTN_BG_PRESSED := Color("#D4C9A4")
+const BTN_BORDER := Color("#C2B58F")
+
+static func make_button_style(bg: Color, border: Color, radius := 10) -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = bg
 	sb.border_color = border
@@ -41,24 +55,31 @@ static func make_button_style(bg: Color, border: Color, radius := 8) -> StyleBox
 	sb.content_margin_right = 14
 	sb.content_margin_top = 8
 	sb.content_margin_bottom = 8
+	sb.shadow_color = Color(0.18, 0.16, 0.12, 0.08)
+	sb.shadow_size = 2
+	sb.shadow_offset = Vector2(0, 1)
 	return sb
 
 static func style_button(btn: Button, primary := false) -> void:
-	var bg: Color = PANEL
-	var hi: Color = PANEL_HI
-	var border: Color = PANEL_BORDER
+	var bg: Color = BTN_BG
+	var hi: Color = BTN_BG_HOVER
+	var pressed: Color = BTN_BG_PRESSED
+	var border: Color = BTN_BORDER
+	var text_col: Color = TEXT
 	if primary:
-		bg = Color("#3a2f1a")
-		hi = Color("#4a3a22")
-		border = ACCENT
+		bg = ACCENT
+		hi = ACCENT_HI
+		pressed = ACCENT_DIM
+		border = ACCENT_DIM
+		text_col = Color("#FFF8EB")
 	btn.add_theme_stylebox_override("normal", make_button_style(bg, border))
 	btn.add_theme_stylebox_override("hover", make_button_style(hi, ACCENT))
-	btn.add_theme_stylebox_override("pressed", make_button_style(Color("#0e0e1f"), border))
-	btn.add_theme_stylebox_override("disabled", make_button_style(Color("#0e0e1a"), Color("#1c1c30")))
-	btn.add_theme_stylebox_override("focus", make_button_style(Color(0, 0, 0, 0), Color("#e8d5a3", 0.6)))
-	btn.add_theme_color_override("font_color", TEXT)
-	btn.add_theme_color_override("font_hover_color", Color("#fff5d8"))
-	btn.add_theme_color_override("font_pressed_color", ACCENT_DIM)
+	btn.add_theme_stylebox_override("pressed", make_button_style(pressed, ACCENT_DIM))
+	btn.add_theme_stylebox_override("disabled", make_button_style(Color("#E8E2D2"), Color("#D2C9AE")))
+	btn.add_theme_stylebox_override("focus", make_button_style(Color(0, 0, 0, 0), ACCENT))
+	btn.add_theme_color_override("font_color", text_col)
+	btn.add_theme_color_override("font_hover_color", text_col)
+	btn.add_theme_color_override("font_pressed_color", text_col)
 	btn.add_theme_color_override("font_disabled_color", TEXT_DIM)
 
 static func make_label(text: String, font_size: int, color: Color, pos: Vector2, size: Vector2, h_align: int = HORIZONTAL_ALIGNMENT_CENTER) -> Label:
@@ -72,46 +93,42 @@ static func make_label(text: String, font_size: int, color: Color, pos: Vector2,
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return lbl
 
-# Vertical gradient background drawn into a CanvasItem.
+# Warm cream gradient — paper feel.
 static func draw_background(ci: CanvasItem, viewport: Vector2) -> void:
-	# Solid base
-	ci.draw_rect(Rect2(Vector2.ZERO, viewport), BG_BOTTOM)
-	# Three-band vertical gradient via stacked translucent rects
+	ci.draw_rect(Rect2(Vector2.ZERO, viewport), BG_TOP)
 	var bands := 24
 	for i in range(bands):
-		var t := float(i) / float(bands - 1)
-		var col := BG_TOP.lerp(BG_BOTTOM, t)
-		var y := viewport.y * float(i) / bands
-		var h := viewport.y / bands + 1
+		var t: float = float(i) / float(bands - 1)
+		var col: Color = BG_TOP.lerp(BG_BOTTOM, t)
+		var y: float = viewport.y * float(i) / float(bands)
+		var h: float = viewport.y / float(bands) + 1.0
 		ci.draw_rect(Rect2(Vector2(0, y), Vector2(viewport.x, h)), col)
-	# Top spotlight glow
-	ci.draw_circle(Vector2(viewport.x * 0.5, -40), viewport.x * 0.8, Color("#e8d5a3", 0.04))
+	# Soft terracotta wash near top (warm spotlight)
+	ci.draw_circle(Vector2(viewport.x * 0.5, -120), viewport.x * 0.9, Color(ACCENT.r, ACCENT.g, ACCENT.b, 0.05))
 
-# Decorative star particles in the background (static, seeded).
+# Subtle paper-grain dots — replaces the cold starfield.
 static func draw_stars(ci: CanvasItem, viewport: Vector2, seed_val: int = 7) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_val
-	for _i in range(36):
-		var x := rng.randf() * viewport.x
-		var y := rng.randf() * viewport.y
-		var r := rng.randf_range(0.6, 1.4)
-		var a := rng.randf_range(0.05, 0.18)
-		ci.draw_circle(Vector2(x, y), r, Color(1, 1, 1, a))
+	for _i in range(60):
+		var x: float = rng.randf() * viewport.x
+		var y: float = rng.randf() * viewport.y
+		var r: float = rng.randf_range(0.5, 1.2)
+		var a: float = rng.randf_range(0.04, 0.10)
+		ci.draw_circle(Vector2(x, y), r, Color(0.18, 0.14, 0.08, a))
 
-# Rounded rect filled with a vertical gradient (top->bottom).
-static func draw_gradient_rect(ci: CanvasItem, rect: Rect2, top: Color, bottom: Color, radius: float = 8.0) -> void:
-	# Approximate with stacked horizontal strips
-	var strips := int(rect.size.y / 2)
+# Rounded rect filled with a vertical gradient (top → bottom).
+static func draw_gradient_rect(ci: CanvasItem, rect: Rect2, top: Color, bottom: Color, _radius: float = 8.0) -> void:
+	var strips := int(rect.size.y / 2.0)
+	if strips < 2: strips = 2
 	for i in range(strips):
-		var t := float(i) / float(strips - 1)
-		var col := top.lerp(bottom, t)
-		var y := rect.position.y + float(i) * (rect.size.y / strips)
-		ci.draw_rect(Rect2(Vector2(rect.position.x, y), Vector2(rect.size.x, rect.size.y / strips + 1)), col)
-	# Overlay rounded corner mask via outline
-	_draw_rounded_outline(ci, rect, radius, Color(0, 0, 0, 0), false, 0)
+		var t: float = float(i) / float(strips - 1)
+		var col: Color = top.lerp(bottom, t)
+		var y: float = rect.position.y + float(i) * (rect.size.y / float(strips))
+		ci.draw_rect(Rect2(Vector2(rect.position.x, y), Vector2(rect.size.x, rect.size.y / float(strips) + 1.0)), col)
 
 static func _draw_rounded_outline(ci: CanvasItem, rect: Rect2, radius: float, color: Color, filled: bool, width: float) -> void:
-	var r = min(radius, rect.size.x / 2, rect.size.y / 2)
+	var r: float = min(radius, rect.size.x / 2.0, rect.size.y / 2.0)
 	var pts := PackedVector2Array([
 		rect.position + Vector2(r, 0),
 		rect.position + Vector2(rect.size.x - r, 0),
