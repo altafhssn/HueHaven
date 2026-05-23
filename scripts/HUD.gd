@@ -47,11 +47,11 @@ func _setup_hud():
 	# Level name (centered, top)
 	level_name_label = Label.new()
 	level_name_label.name = "LevelNameLabel"
-	level_name_label.add_theme_font_size_override("font_size", 16)
-	level_name_label.add_theme_color_override("font_color", StyleScript.ACCENT)
+	level_name_label.add_theme_font_size_override("font_size", 18)
+	level_name_label.add_theme_color_override("font_color", StyleScript.TEXT)
 	level_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	level_name_label.position = Vector2(0, 22)
-	level_name_label.size = Vector2(vp.x, 22)
+	level_name_label.size = Vector2(vp.x, 24)
 	add_child(level_name_label)
 
 	# Move counter (centered, just under level name)
@@ -107,8 +107,8 @@ func _setup_hud():
 	add_child(win_card)
 
 	win_label = Label.new()
-	win_label.add_theme_font_size_override("font_size", 24)
-	win_label.add_theme_color_override("font_color", StyleScript.ACCENT)
+	win_label.add_theme_font_size_override("font_size", 26)
+	win_label.add_theme_color_override("font_color", StyleScript.TEXT)
 	win_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	win_label.position = Vector2(card_x, card_y + 28)
 	win_label.size = Vector2(card_w, 32)
@@ -208,14 +208,15 @@ func _setup_hud():
 func _card_style() -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = StyleScript.PANEL
-	sb.border_color = StyleScript.ACCENT_DIM
+	sb.border_color = StyleScript.PANEL_BORDER_HI
 	sb.set_border_width_all(1)
-	sb.corner_radius_top_left = 14
-	sb.corner_radius_top_right = 14
-	sb.corner_radius_bottom_left = 14
-	sb.corner_radius_bottom_right = 14
-	sb.shadow_color = Color(0, 0, 0, 0.4)
-	sb.shadow_size = 12
+	sb.corner_radius_top_left = 16
+	sb.corner_radius_top_right = 16
+	sb.corner_radius_bottom_left = 16
+	sb.corner_radius_bottom_right = 16
+	sb.shadow_color = Color(0.18, 0.13, 0.07, 0.25)
+	sb.shadow_size = 16
+	sb.shadow_offset = Vector2(0, 4)
 	return sb
 
 func _make_text_button(text: String, pos: Vector2, w: float, h: float, callback: Callable) -> Button:
@@ -268,7 +269,7 @@ func show_win(stars: int, pack_info: Dictionary):
 		return
 
 	win_overlay.visible = true
-	win_overlay.color = Color(0, 0, 0, 0.55)
+	win_overlay.color = Color(0.18, 0.13, 0.07, 0.45)
 	win_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 	if win_card:
 		win_card.visible = true
@@ -345,7 +346,7 @@ func _on_menu():
 
 func show_stuck():
 	stuck_overlay.visible = true
-	stuck_overlay.color = Color(0, 0, 0, 0.45)
+	stuck_overlay.color = Color(0.18, 0.13, 0.07, 0.4)
 	if stuck_card:
 		stuck_card.visible = true
 	stuck_label.visible = true
@@ -370,7 +371,7 @@ func hide_stuck():
 func _on_open_settings():
 	settings_open = true
 	settings_overlay.visible = true
-	settings_overlay.color = Color(0, 0, 0, 0.6)
+	settings_overlay.color = Color(0.18, 0.13, 0.07, 0.5)
 	settings_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 	if settings_card:
 		settings_card.visible = true

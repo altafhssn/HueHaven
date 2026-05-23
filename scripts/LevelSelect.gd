@@ -84,9 +84,9 @@ func _refresh_tab_styles():
 	for i in range(pack_tab_buttons.size()):
 		var btn: Button = pack_tab_buttons[i]
 		if i == current_pack_index:
-			# Active tab — accent style
-			btn.add_theme_color_override("font_color", StyleScript.ACCENT)
-			btn.add_theme_stylebox_override("normal", StyleScript.make_button_style(Color("#2a2244"), StyleScript.ACCENT))
+			# Active tab — terracotta fill, cream text
+			btn.add_theme_color_override("font_color", Color("#FFF8EB"))
+			btn.add_theme_stylebox_override("normal", StyleScript.make_button_style(StyleScript.ACCENT, StyleScript.ACCENT_DIM))
 		else:
 			btn.add_theme_color_override("font_color", StyleScript.TEXT_MUTED)
 			btn.add_theme_stylebox_override("normal", StyleScript.make_button_style(StyleScript.PANEL, StyleScript.PANEL_BORDER))
@@ -145,21 +145,23 @@ func _make_level_button(level_idx: int, pos: Vector2, unlocked: bool, current: b
 	btn.disabled = not unlocked
 	btn.focus_mode = Control.FOCUS_NONE
 	btn.add_theme_font_size_override("font_size", 18)
-	btn.add_theme_color_override("font_color", StyleScript.ACCENT)
+	btn.add_theme_color_override("font_color", StyleScript.TEXT)
 	btn.add_theme_color_override("font_disabled_color", StyleScript.TEXT_DIM)
 
 	var bg: Color = StyleScript.PANEL
 	var border: Color = StyleScript.PANEL_BORDER
 	if current:
-		bg = Color("#2a2244")
-		border = StyleScript.ACCENT
+		# Current level: terracotta fill, cream text
+		bg = StyleScript.ACCENT
+		border = StyleScript.ACCENT_DIM
+		btn.add_theme_color_override("font_color", Color("#FFF8EB"))
 	elif not unlocked:
-		bg = Color("#0f0f1c")
-		border = Color("#1a1a30")
-	btn.add_theme_stylebox_override("normal", StyleScript.make_button_style(bg, border, 10))
-	btn.add_theme_stylebox_override("hover", StyleScript.make_button_style(Color("#22224a"), StyleScript.ACCENT, 10))
-	btn.add_theme_stylebox_override("pressed", StyleScript.make_button_style(Color("#11112a"), border, 10))
-	btn.add_theme_stylebox_override("disabled", StyleScript.make_button_style(bg, border, 10))
+		bg = Color("#E0DAC8")
+		border = Color("#CFC6AC")
+	btn.add_theme_stylebox_override("normal", StyleScript.make_button_style(bg, border, 12))
+	btn.add_theme_stylebox_override("hover", StyleScript.make_button_style(StyleScript.PANEL_HI, StyleScript.ACCENT, 12))
+	btn.add_theme_stylebox_override("pressed", StyleScript.make_button_style(StyleScript.PANEL_HI.darkened(0.08), border, 12))
+	btn.add_theme_stylebox_override("disabled", StyleScript.make_button_style(bg, border, 12))
 
 	if unlocked:
 		btn.text = str(level_idx + 1)
