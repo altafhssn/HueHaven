@@ -1,6 +1,6 @@
 extends RefCounted
 
-# Theme variants — each pack gets a different atmosphere.
+# Theme variants — each pack gets a different accent color, same clean shapes.
 const THEME_UNDERWATER := 0
 const THEME_ALCHEMY := 1
 const THEME_SCIFI := 2
@@ -11,13 +11,67 @@ static func theme_for_pack(pack_idx: int) -> int:
 	var cycle := [THEME_UNDERWATER, THEME_ALCHEMY, THEME_FOREST, THEME_SCIFI, THEME_ALCHEMY, THEME_FOREST]
 	return cycle[pack_idx % cycle.size()]
 
-# Top-level themed background dispatcher.
+# Top-level themed background dispatcher. Uses one clean shared design
+# (gradient + vignette + minimal particles) recolored per theme — no
+# per-theme elaborate geometry that distorts at non-portrait aspects.
 static func draw_themed_background(ci: CanvasItem, viewport: Vector2, t: float, theme: int) -> void:
+	var top: Color
+	var bot: Color
+	var accent: Color
 	match theme:
-		THEME_ALCHEMY: _draw_alchemy_bg(ci, viewport, t)
-		THEME_SCIFI:   _draw_scifi_bg(ci, viewport, t)
-		THEME_FOREST:  _draw_forest_bg(ci, viewport, t)
-		_:             draw_animated_background(ci, viewport, t)  # underwater
+		THEME_ALCHEMY:
+			top = Color("#2a1a14"); bot = Color("#0a0604"); accent = Color("#d97757")
+		THEME_SCIFI:
+			top = Color("#181838"); bot = Color("#04060f"); accent = Color("#5cb0d9")
+		THEME_FOREST:
+			top = Color("#0e2820"); bot = Color("#02080a"); accent = Color("#88d9a0")
+		_:
+			top = Color("#0e2840"); bot = Color("#040814"); accent = Color("#5cb0d9")
+	_draw_clean_bg(ci, viewport, t, top, bot, accent)
+
+static func _draw_clean_bg(ci: CanvasItem, viewport: Vector2, t: float, top: Color, bot: Color, accent: Color) -> void:
+	# (1) Vertical gradient — uniform, scales naturally to any aspect
+	var bands := 32
+	for i in range(bands):
+		var pos: float = float(i) / float(bands - 1)
+		var col: Color = top.lerp(bot, pos)
+		var y: float = viewport.y * float(i) / float(bands)
+		var h: float = viewport.y / float(bands) + 1.0
+		ci.draw_rect(Rect2(Vector2(0, y), Vector2(viewport.x, h)), col)
+
+	# (2) Soft accent glow near the top — drifts very slowly side-to-side
+	var glow_x: float = viewport.x * (0.5 + 0.10 * sin(t * 0.06))
+	var glow_y: float = viewport.y * 0.15
+	var r1: float = viewport.x * 0.85
+	ci.draw_circle(Vector2(glow_x, glow_y), r1, Color(accent.r, accent.g, accent.b, 0.04))
+	ci.draw_circle(Vector2(glow_x, glow_y), r1 * 0.65, Color(accent.r, accent.g, accent.b, 0.05))
+	ci.draw_circle(Vector2(glow_x, glow_y), r1 * 0.35, Color(accent.r, accent.g, accent.b, 0.06))
+
+	# (3) Radial vignette — darken edges slightly so focus is centered
+	var corner_dark := Color(0, 0, 0, 0.25)
+	for k in range(6):
+		var grow := float(k * 30)
+		var rect := Rect2(-grow, -grow, viewport.x + grow * 2, viewport.y + grow * 2)
+		var alpha := (float(k) + 1.0) / 30.0
+		# Top + bottom edge darkening
+		ci.draw_rect(Rect2(0, viewport.y - 80 - grow * 2, viewport.x, 30), Color(0, 0, 0, alpha))
+		ci.draw_rect(Rect2(0, grow * 2, viewport.x, 20), Color(0, 0, 0, alpha * 0.5))
+
+	# (4) Minimal drifting particles (12 of them) — neutral dots
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	for i in range(12):
+		var base_x: float = rng.randf() * viewport.x
+		var seed_y: float = rng.randf() * viewport.y
+		var radius: float = rng.randf_range(1.0, 2.4)
+		var speed: float = rng.randf_range(6.0, 14.0)
+		var sway: float = rng.randf_range(10.0, 22.0)
+		var phase: float = rng.randf() * TAU
+		var y_pos: float = fposmod(seed_y - t * speed, viewport.y + 30.0) - 15.0
+		var x_pos: float = base_x + sin(t * 0.3 + phase) * sway
+		var alpha: float = 0.12 + 0.10 * sin(t * 0.4 + phase)
+		ci.draw_circle(Vector2(x_pos, y_pos), radius * 1.8, Color(accent.r, accent.g, accent.b, alpha * 0.25))
+		ci.draw_circle(Vector2(x_pos, y_pos), radius, Color(0.95, 0.95, 1.0, alpha))
 
 # --- Background: underwater (deep teal → abyss) ---
 const BG_TOP := Color("#0F3954")
