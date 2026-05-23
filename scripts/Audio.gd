@@ -46,11 +46,13 @@ const SFX_DIR := "res://assets/audio/sfx/"
 func _ready() -> void:
 	# Auto-load any file in the sfx folder whose name (without extension)
 	# matches one of the registered EVENTS. Supports .wav and .ogg.
-	for ev in EVENTS:
-		for ext in [".ogg", ".wav"]:
-			var path := SFX_DIR + ev + ext
+	var exts: Array[String] = [".ogg", ".wav"]
+	for ev_raw in EVENTS:
+		var ev: String = str(ev_raw)
+		for ext in exts:
+			var path: String = SFX_DIR + ev + ext
 			if ResourceLoader.exists(path):
-				var stream := load(path)
+				var stream: Resource = load(path)
 				if stream is AudioStream:
 					streams[ev] = stream
 					break
