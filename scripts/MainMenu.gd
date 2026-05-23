@@ -91,17 +91,15 @@ func _draw():
 	draw_string(font, Vector2(viewport.x * 0.5 - st_size.x * 0.5, viewport.y * 0.48),
 		subtitle, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, StyleScript.TEXT_MUTED)
 
-# Logo mark — rounded icon container with a glass dome holding three
-# translucent color spheres, ambient warm rim glow. iOS-icon proportions.
+# Logo mark — apothecary test tube with four stacked glass balls inside,
+# warm rim glow inside a dark rounded squircle. Game-referenced.
 func _draw_logo(viewport: Vector2):
 	var cx: float = viewport.x * 0.5
 	var cy: float = viewport.y * 0.22
 	var icon_size: float = 170.0
-	var icon_r: float = icon_size * 0.22  # squircle-ish radius
-	var pulse: float = 1.0 + 0.015 * sin(time_t * 1.0)
+	var icon_r: float = icon_size * 0.22  # iOS squircle-ish corner
 
-	# ----- (1) Icon container — rounded square with dark navy gradient -----
-	# Outer soft shadow under the icon
+	# ----- (1) Drop shadow + icon container -----
 	for k in range(4):
 		var sh_rect := Rect2(
 			cx - icon_size * 0.5 - float(k),
@@ -109,72 +107,65 @@ func _draw_logo(viewport: Vector2):
 			icon_size + float(k) * 2.0,
 			icon_size + float(k) * 2.0)
 		StyleScript.draw_rounded_rect(self, sh_rect, Color(0, 0, 0, 0.10), icon_r + float(k), true)
-
 	var icon_rect := Rect2(cx - icon_size * 0.5, cy - icon_size * 0.5, icon_size, icon_size)
-	# Dark navy base
 	StyleScript.draw_rounded_rect(self, icon_rect, Color("#1A2238"), icon_r, true)
-	# Vertical gradient on top of the base for subtle depth
 	StyleScript.draw_gradient_rect(self, icon_rect, Color("#22304A"), Color("#0E1828"), icon_r)
 
-	# ----- (2) Warm ambient rim glow (contained inside the icon) -----
-	# Top half — accent fading downward to transparent. The gradient strip
-	# tapers at the icon corners thanks to draw_gradient_rect's corner-aware
-	# fill, so the glow naturally hugs the rounded top.
-	var top_glow := Rect2(icon_rect.position.x, icon_rect.position.y, icon_size, icon_size * 0.55)
+	# ----- (2) Warm rim glow (contained) -----
+	var top_glow := Rect2(icon_rect.position.x, icon_rect.position.y, icon_size, icon_size * 0.50)
 	StyleScript.draw_gradient_rect(self, top_glow,
-		Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, 0.22),
+		Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, 0.18),
 		Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, 0.0),
 		icon_r)
-	# Bottom half — accent fading upward
-	var bot_glow := Rect2(icon_rect.position.x, cy + icon_size * 0.0, icon_size, icon_size * 0.5)
+	var bot_glow := Rect2(icon_rect.position.x, cy + icon_size * 0.05, icon_size, icon_size * 0.45)
 	StyleScript.draw_gradient_rect(self, bot_glow,
 		Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, 0.0),
-		Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, 0.18),
+		Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, 0.14),
 		icon_r)
 
-	# ----- (3) Glass dome — large translucent sphere in the center -----
-	var dome_r: float = icon_size * 0.40 * pulse
-	var dome_center := Vector2(cx, cy)
-	# Dome backdrop tint (very subtle warm wash inside)
-	draw_circle(dome_center, dome_r * 1.05,
-		Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, 0.08))
-	# Dome body — barely visible translucent glass
-	draw_circle(dome_center, dome_r, Color(1.0, 1.0, 1.0, 0.04))
-	# Subtle outer ring (glass edge)
-	for k in range(2):
-		draw_arc(dome_center, dome_r - float(k), 0, TAU, 64,
-			Color(1, 1, 1, 0.18 - float(k) * 0.08), 1.0)
+	# ----- (3) Test tube — glass vial silhouette centered in the icon -----
+	var tube_w: float = icon_size * 0.42
+	var tube_h: float = icon_size * 0.72
+	var tube_x: float = cx - tube_w * 0.5
+	var tube_y: float = cy - tube_h * 0.5
+	var tube_rect := Rect2(tube_x, tube_y, tube_w, tube_h)
+	var tube_corner_r: float = tube_w * 0.40   # very rounded so bottom = U-shape
 
-	# ----- (4) Three overlapping color spheres inside the dome -----
-	var ball_r: float = icon_size * 0.20
-	var sep: float = ball_r * 0.55
-	var positions := [
-		Vector2(cx, cy - sep * 0.9),                          # top
-		Vector2(cx - sep * 0.92, cy + sep * 0.55),            # bottom-left
-		Vector2(cx + sep * 0.92, cy + sep * 0.55),            # bottom-right
+	# Tube backdrop tint (slight cool wash so the glass reads)
+	StyleScript.draw_rounded_rect(self, tube_rect, Color(0.55, 0.78, 0.95, 0.04), tube_corner_r, true)
+	# Tube body gradient (translucent, brighter at top)
+	StyleScript.draw_gradient_rect(self, tube_rect,
+		Color(0.65, 0.85, 0.98, 0.16),
+		Color(0.35, 0.55, 0.75, 0.10),
+		tube_corner_r)
+	# Tube outer rim — thin warm-tinted border
+	StyleScript.draw_rounded_rect(self, tube_rect,
+		Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, 0.55),
+		tube_corner_r, false, 1.8)
+	# Left edge vertical highlight (light catching the glass)
+	draw_rect(Rect2(tube_x + 4, tube_y + 14, 2, tube_h - 28), Color(1, 1, 1, 0.25))
+	# Brighter rim on the upper lip
+	draw_rect(Rect2(tube_x + tube_w * 0.20, tube_y + 2, tube_w * 0.60, 2), Color(1, 1, 1, 0.30))
+
+	# ----- (4) Four stacked colored balls inside the tube -----
+	var ball_r: float = tube_w * 0.34
+	var ball_step: float = ball_r * 2.0 + 1.0
+	# Balls sit from bottom up
+	var ball_colors := [
+		Color("#7DBE82"),  # sage green (bottom)
+		Color("#7AB8C4"),  # pale teal
+		Color("#C46E70"),  # coral red
+		Color("#FF8C5A"),  # warm coral/orange (top)
 	]
-	var colors := [
-		Color("#FF8C5A"),  # warm coral (top)
-		Color("#7AB8C4"),  # pale teal (bottom-left)
-		Color("#7DBE82"),  # sage green (bottom-right)
-	]
-	for i in range(3):
-		_draw_logo_ball(positions[i], ball_r, colors[i])
+	var bottom_center_y: float = tube_y + tube_h - tube_corner_r * 0.4 - ball_r
+	for i in range(ball_colors.size()):
+		var by: float = bottom_center_y - float(i) * (ball_step * 0.92)
+		# Subtle inset so the topmost ball doesn't push above the lip
+		_draw_logo_ball(Vector2(cx, by), ball_r, ball_colors[i])
 
-	# ----- (5) Bright top-left highlight on the glass dome -----
-	var hl_center := dome_center + Vector2(-dome_r * 0.45, -dome_r * 0.55)
-	draw_circle(hl_center, dome_r * 0.30, Color(1, 1, 1, 0.10))
-	draw_circle(hl_center, dome_r * 0.22, Color(1, 1, 1, 0.18))
-	draw_circle(hl_center, dome_r * 0.14, Color(1, 1, 1, 0.28))
-	draw_circle(hl_center, dome_r * 0.07, Color(1, 1, 1, 0.55))
-
-	# ----- (6) Tiny bottom-right secondary highlight -----
-	var hl2 := dome_center + Vector2(dome_r * 0.55, dome_r * 0.50)
-	draw_circle(hl2, dome_r * 0.10, Color(1, 1, 1, 0.10))
-
-	# ----- (7) Icon rounded-rect border (very subtle) -----
+	# ----- (5) Subtle accent border around the whole icon -----
 	StyleScript.draw_rounded_rect(self, icon_rect,
-		Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, 0.18),
+		Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, 0.20),
 		icon_r, false, 1.5)
 
 func _draw_logo_ball(center: Vector2, r: float, color: Color) -> void:
