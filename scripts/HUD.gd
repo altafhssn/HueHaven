@@ -290,6 +290,7 @@ func _make_action_button(icon_name: String, label_text: String, pos: Vector2, w:
 	var icon_col: Color = Color("#1a1208") if primary else StyleScript.TEXT
 
 	var glyph := Control.new()
+	glyph.name = "IconGlyph"
 	glyph.size = Vector2(icon_size, icon_size)
 	glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	glyph.set_meta("icon_name", icon_name)
@@ -301,21 +302,57 @@ func _make_action_button(icon_name: String, label_text: String, pos: Vector2, w:
 	)
 	btn.add_child(glyph)
 
-	# Layout: icon + label centered together as a single group
-	var layout = func():
-		var font := ThemeDB.fallback_font
-		var text_w: float = font.get_string_size(label_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
-		var group_w: float = float(icon_size) + gap + text_w
-		var group_x: float = (btn.size.x - group_w) * 0.5
-		glyph.position = Vector2(group_x, (btn.size.y - float(icon_size)) * 0.5)
-		for state in ["normal", "hover", "pressed", "disabled"]:
-			var sb: StyleBoxFlat = btn.get_theme_stylebox(state)
-			if sb:
-				sb.content_margin_left = group_x + float(icon_size) + gap
-				sb.content_margin_right = group_x
-	btn.resized.connect(layout)
-	layout.call()
+	btn.set_meta("ic_label", label_text)
+	btn.set_meta("ic_font_size", 15)
+	btn.set_meta("ic_size", icon_size)
+	btn.set_meta("ic_gap", gap)
+	btn.set_meta("ic_primary", primary)
+
+	btn.resized.connect(_layout_action_button.bind(btn))
+	_layout_action_button.call_deferred(btn)
 	return btn
+
+func _layout_action_button(btn: Button) -> void:
+	if not is_instance_valid(btn) or btn.size.x <= 1.0:
+		return
+	var label_text: String = btn.get_meta("ic_label", "")
+	var font_size: int = btn.get_meta("ic_font_size", 15)
+	var icon_size: int = btn.get_meta("ic_size", 22)
+	var gap: float = btn.get_meta("ic_gap", 8.0)
+	var primary: bool = btn.get_meta("ic_primary", false)
+
+	var font := ThemeDB.fallback_font
+	var text_w: float = font.get_string_size(label_text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	var group_w: float = float(icon_size) + gap + text_w
+	var group_x: float = (btn.size.x - group_w) * 0.5
+	if group_x < 8.0:
+		group_x = 8.0
+	var glyph := btn.get_node_or_null("IconGlyph") as Control
+	if glyph:
+		glyph.position = Vector2(group_x, (btn.size.y - float(icon_size)) * 0.5)
+	_apply_btn_margins(btn, primary, group_x + float(icon_size) + gap, 12.0)
+
+func _apply_btn_margins(btn: Button, primary: bool, pad_left: float, pad_right: float) -> void:
+	# Rebuild styleboxes so Godot re-lays out the text with the new content margins
+	var states_bg := {
+		"normal":   [StyleScript.BTN_BG, StyleScript.BTN_BORDER],
+		"hover":    [StyleScript.BTN_BG_HOVER, StyleScript.ACCENT],
+		"pressed":  [StyleScript.BTN_BG_PRESSED, StyleScript.BTN_BORDER],
+		"disabled": [Color("#1A1612"), Color("#252019")],
+	}
+	if primary:
+		states_bg["normal"]   = [StyleScript.ACCENT, StyleScript.ACCENT]
+		states_bg["hover"]    = [StyleScript.ACCENT_HI, StyleScript.ACCENT_HI]
+		states_bg["pressed"]  = [StyleScript.ACCENT_DIM, StyleScript.ACCENT]
+		states_bg["disabled"] = [Color("#1A1612"), Color("#252019")]
+	for state in states_bg.keys():
+		var pair: Array = states_bg[state]
+		var sb := StyleScript.make_button_style(pair[0], pair[1])
+		sb.content_margin_left = pad_left
+		sb.content_margin_right = pad_right
+		sb.content_margin_top = 10
+		sb.content_margin_bottom = 10
+		btn.add_theme_stylebox_override(state, sb)
 
 func _make_text_button(text: String, pos: Vector2, w: float, h: float, callback: Callable) -> Button:
 	var btn := Button.new()
