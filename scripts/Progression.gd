@@ -74,6 +74,9 @@ func is_colorblind() -> bool:
 func is_muted() -> bool:
 	return bool(get_setting("muted", false))
 
+func is_haptics_enabled() -> bool:
+	return bool(get_setting("haptics", true))
+
 # --- Save/Load ---
 
 func save_progress():

@@ -54,6 +54,13 @@ var is_using_generated_levels: bool = false
 var is_showing_level_select: bool = true
 var win_shown: bool = false
 
+# Screen transition fader
+var transition_layer: CanvasLayer = null
+var transition_overlay: ColorRect = null
+var transition_tween: Tween = null
+const TRANSITION_FADE_IN: float = 0.16
+const TRANSITION_FADE_OUT: float = 0.20
+
 func _ready():
 	viewport_size = get_viewport().get_visible_rect().size
 
@@ -61,10 +68,11 @@ func _ready():
 	progression = ProgressionScript.new()
 	colorblind = progression.is_colorblind()
 
-	# Sync audio mute state
+	# Sync audio + haptics state with saved settings
 	var audio = get_node_or_null("/root/Audio")
 	if audio:
 		audio.set_muted(progression.is_muted())
+		audio.set_haptics_enabled(progression.is_haptics_enabled())
 
 	# Create HUD
 	var HUDClass = preload("res://scripts/HUD.gd")
@@ -73,8 +81,31 @@ func _ready():
 	hud.main_ref = self
 	hud.visible = false  # Hide HUD until game starts
 
-	# Boot into main menu
+	# Transition layer — fades to black over screen swaps
+	transition_layer = CanvasLayer.new()
+	transition_layer.layer = 100  # above HUD
+	add_child(transition_layer)
+	transition_overlay = ColorRect.new()
+	transition_overlay.color = Color(0, 0, 0, 0)
+	transition_overlay.size = viewport_size
+	transition_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	transition_layer.add_child(transition_overlay)
+
+	# Boot into main menu (no fade on first launch)
 	show_main_menu()
+
+# Cross-fade through black for a screen swap. `apply` is the actual swap
+# callback (clears old screens + builds the new one). Defers user input
+# during the fade by capturing the overlay.
+func _transition(apply: Callable) -> void:
+	if transition_tween and transition_tween.is_valid():
+		transition_tween.kill()
+	transition_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	transition_tween = create_tween()
+	transition_tween.tween_property(transition_overlay, "color:a", 1.0, TRANSITION_FADE_IN)
+	transition_tween.tween_callback(apply)
+	transition_tween.tween_property(transition_overlay, "color:a", 0.0, TRANSITION_FADE_OUT)
+	transition_tween.tween_callback(func(): transition_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE)
 
 func _clear_screens():
 	if main_menu and is_instance_valid(main_menu):
@@ -91,6 +122,13 @@ func _clear_screens():
 		settings_screen = null
 
 func show_main_menu():
+	# First-launch (no transition layer yet) just swaps immediately
+	if transition_overlay == null:
+		_apply_main_menu()
+	else:
+		_transition(_apply_main_menu)
+
+func _apply_main_menu():
 	screen_state = "menu"
 	is_showing_level_select = true
 	win_shown = false
@@ -103,6 +141,9 @@ func show_main_menu():
 	queue_redraw()
 
 func show_pack_select():
+	_transition(_apply_pack_select)
+
+func _apply_pack_select():
 	screen_state = "packs"
 	is_showing_level_select = true
 	win_shown = false
@@ -115,10 +156,12 @@ func show_pack_select():
 	queue_redraw()
 
 func show_level_select():
-	# Legacy entry — routes through pack select now
 	show_pack_select()
 
 func show_level_select_for_pack(pack_idx: int):
+	_transition(_apply_level_select_for_pack.bind(pack_idx))
+
+func _apply_level_select_for_pack(pack_idx: int):
 	screen_state = "levels"
 	is_showing_level_select = true
 	win_shown = false
@@ -132,6 +175,9 @@ func show_level_select_for_pack(pack_idx: int):
 	queue_redraw()
 
 func show_settings():
+	_transition(_apply_settings)
+
+func _apply_settings():
 	screen_state = "settings"
 	is_showing_level_select = true
 	if hud: hud.visible = false
@@ -147,17 +193,20 @@ func _show_level_select():
 	show_level_select()
 
 func start_level(level_idx: int):
+	_transition(_apply_start_level.bind(level_idx))
+
+func _apply_start_level(level_idx: int):
 	screen_state = "game"
 	is_showing_level_select = false
 	is_using_generated_levels = true
 	win_shown = false
 
 	_clear_screens()
-	
+
 	# Show HUD
 	if hud:
 		hud.visible = true
-	
+
 	_load_generated_level(level_idx)
 
 func _load_generated_level(idx: int):
@@ -721,6 +770,20 @@ func toggle_mute() -> bool:
 	if audio:
 		audio.set_muted(new_state)
 	return new_state
+
+func toggle_haptics() -> bool:
+	var audio = get_node_or_null("/root/Audio")
+	var new_state = not progression.is_haptics_enabled()
+	progression.set_setting("haptics", new_state)
+	if audio:
+		audio.set_haptics_enabled(new_state)
+	# Quick test-buzz so the user feels what they enabled
+	if new_state:
+		Input.vibrate_handheld(30)
+	return new_state
+
+func is_haptics_enabled() -> bool:
+	return progression.is_haptics_enabled()
 
 func is_colorblind() -> bool:
 	return colorblind
