@@ -27,7 +27,7 @@ window/size/window_width_override=480
 window/size/window_height_override=854
 window/size/resizable=true
 window/stretch/mode="canvas_items"
-window/stretch/aspect="keep"
+window/stretch/aspect="keep_height"
 
 [gui]
 
