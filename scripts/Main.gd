@@ -209,8 +209,10 @@ func _draw():
 	var n_tubes = tubes.size()
 	var capacity = level_data.capacity
 	
-	# Atmospheric background (animated warm glows)
-	StyleScript.draw_animated_background(self, viewport_size, Time.get_ticks_msec() / 1000.0)
+	# Atmospheric background — theme by current pack
+	var t_sec: float = Time.get_ticks_msec() / 1000.0
+	var theme: int = _current_theme()
+	StyleScript.draw_themed_background(self, viewport_size, t_sec, theme)
 
 	# Draw each tube
 	for i in range(n_tubes):
@@ -740,6 +742,19 @@ func get_current_level() -> int:
 
 func get_game_state():
 	return game_state
+
+func _current_theme() -> int:
+	if not is_using_generated_levels:
+		return StyleScript.THEME_UNDERWATER
+	var pack_info = LevelGeneratorScript.get_pack_info(current_level_idx)
+	# Map global pack_start to its index
+	var packs = LevelGeneratorScript.get_packs()
+	var cum := 0
+	for i in range(packs.size()):
+		if pack_info.pack_start == cum:
+			return StyleScript.theme_for_pack(i)
+		cum += packs[i].levels
+	return StyleScript.THEME_UNDERWATER
 
 func get_current_level_name() -> String:
 	if is_using_generated_levels:
