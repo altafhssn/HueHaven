@@ -223,9 +223,9 @@ func _draw():
 	)
 	# Drop shadow
 	draw_rounded_rect(Rect2(stage_rect.position + Vector2(0, 4), stage_rect.size),
-		Color(0.18, 0.13, 0.07, 0.06), 18, true)
-	# Stage fill (slightly darker than bg for contrast)
-	draw_rounded_rect(stage_rect, Color(0.95, 0.91, 0.81, 0.5), 18, true)
+		Color(0, 0, 0, 0.25), 18, true)
+	# Stage fill — subtly lighter than bg
+	draw_rounded_rect(stage_rect, Color(StyleScript.PANEL.r, StyleScript.PANEL.g, StyleScript.PANEL.b, 0.55), 18, true)
 	draw_rounded_rect(stage_rect, StyleScript.PANEL_BORDER, 18, false, 1.0)
 
 	# Draw each tube
@@ -240,18 +240,18 @@ func _draw():
 
 		# Soft drop shadow under tube
 		var shadow_rect = Rect2(tube_rect.position + Vector2(2, 4), tube_rect.size)
-		draw_rounded_rect(shadow_rect, Color(0.18, 0.14, 0.08, 0.12), 12, true)
+		draw_rounded_rect(shadow_rect, Color(0, 0, 0, 0.25), 12, true)
 
-		# Tube body — gradient cream → slightly darker
+		# Tube body — gradient deep navy → near-black
 		var bg_top = StyleScript.TUBE_BG_HI
 		var bg_bot = StyleScript.TUBE_BG
 		if selected_tube == i:
-			bg_top = Color("#F2DCC6")
-			bg_bot = Color("#E5C8AB")
+			bg_top = Color("#3a3260")
+			bg_bot = Color("#2a2448")
 		StyleScript.draw_gradient_rect(self, tube_rect, bg_top, bg_bot, 12.0)
 		# Inner top highlight (glass effect)
 		draw_rect(Rect2(tube_rect.position + Vector2(3, 3), Vector2(tube_rect.size.x - 6, 3)),
-			Color(1, 1, 1, 0.45))
+			Color(1, 1, 1, 0.06))
 		# Inner bottom shadow
 		draw_rect(Rect2(tube_rect.position + Vector2(3, tube_rect.size.y - 8), Vector2(tube_rect.size.x - 6, 4)),
 			StyleScript.TUBE_INNER_SHADOW)
@@ -286,13 +286,11 @@ func _draw():
 
 			_draw_ball(Vector2(tube_x + tube_width / 2, y_pos + lift_offset), ball_entry)
 		
-		# Empty slots indicator — soft dot. We use draw_count (not n_balls) so
-		# the source tube during a move doesn't show an extra placeholder where
-		# the in-flight ball originated.
+		# Empty slots indicator — soft dot
 		for e in range(capacity - draw_count):
 			var slot_y = grid_offset.y + tube_height - (draw_count + e + 1) * (ball_radius * 2 + 2)
 			var center = Vector2(tube_x + tube_width / 2, slot_y)
-			draw_circle(center, ball_radius * 0.4, Color(0.5, 0.45, 0.35, 0.18))
+			draw_circle(center, ball_radius * 0.4, Color(1, 1, 1, 0.06))
 
 		# Sparkle effect for completed tubes
 		if sparkle_tubes.has(i):
@@ -395,9 +393,9 @@ func _draw_ball(center: Vector2, ball_entry):
 		return
 
 	# Glossy marble draw — layered to approximate a 3D plastic sphere.
-	# (1) Soft cast shadow underneath
-	draw_circle(center + Vector2(0.5, ball_radius * 0.18), ball_radius * 1.05, Color(0.05, 0.04, 0.02, 0.18))
-	draw_circle(center + Vector2(0.5, ball_radius * 0.22), ball_radius * 0.95, Color(0.05, 0.04, 0.02, 0.12))
+	# (1) Soft cast shadow underneath (deeper on dark bg)
+	draw_circle(center + Vector2(0.5, ball_radius * 0.18), ball_radius * 1.05, Color(0, 0, 0, 0.35))
+	draw_circle(center + Vector2(0.5, ball_radius * 0.22), ball_radius * 0.95, Color(0, 0, 0, 0.20))
 
 	# (2) Outer dark rim (a darker shade of body color) — definition on light bg
 	draw_circle(center, ball_radius + 0.6, color.darkened(0.32))

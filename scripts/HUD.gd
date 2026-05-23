@@ -253,9 +253,9 @@ func _card_style() -> StyleBoxFlat:
 	sb.corner_radius_top_right = 16
 	sb.corner_radius_bottom_left = 16
 	sb.corner_radius_bottom_right = 16
-	sb.shadow_color = Color(0.18, 0.13, 0.07, 0.25)
-	sb.shadow_size = 16
-	sb.shadow_offset = Vector2(0, 4)
+	sb.shadow_color = Color(0, 0, 0, 0.5)
+	sb.shadow_size = 18
+	sb.shadow_offset = Vector2(0, 6)
 	return sb
 
 func _make_text_button(text: String, pos: Vector2, w: float, h: float, callback: Callable) -> Button:
@@ -308,7 +308,7 @@ func show_win(stars: int, pack_info: Dictionary):
 		return
 
 	win_overlay.visible = true
-	win_overlay.color = Color(0.18, 0.13, 0.07, 0.45)
+	win_overlay.color = Color(0, 0, 0, 0.55)
 	win_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 	if win_card:
 		win_card.visible = true
@@ -385,7 +385,7 @@ func _on_menu():
 
 func show_stuck():
 	stuck_overlay.visible = true
-	stuck_overlay.color = Color(0.18, 0.13, 0.07, 0.4)
+	stuck_overlay.color = Color(0, 0, 0, 0.5)
 	if stuck_card:
 		stuck_card.visible = true
 	stuck_label.visible = true
@@ -410,7 +410,7 @@ func hide_stuck():
 func _on_open_settings():
 	settings_open = true
 	settings_overlay.visible = true
-	settings_overlay.color = Color(0.18, 0.13, 0.07, 0.5)
+	settings_overlay.color = Color(0, 0, 0, 0.6)
 	settings_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 	if settings_card:
 		settings_card.visible = true
