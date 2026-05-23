@@ -408,15 +408,34 @@ static func _draw_soft_glow(ci: CanvasItem, center: Vector2, radius: float, colo
 	ci.draw_circle(center, radius * 0.65, Color(color.r, color.g, color.b, color.a * 1.4))
 	ci.draw_circle(center, radius * 0.35, Color(color.r, color.g, color.b, color.a * 2.0))
 
-# Rounded rect filled with a vertical gradient (top → bottom).
-static func draw_gradient_rect(ci: CanvasItem, rect: Rect2, top: Color, bottom: Color, _radius: float = 8.0) -> void:
-	var strips := int(rect.size.y / 2.0)
-	if strips < 2: strips = 2
+# Rounded rect filled with a vertical gradient. Each strip tapers at the
+# top/bottom corner arcs so the fill matches the rounded outline.
+static func draw_gradient_rect(ci: CanvasItem, rect: Rect2, top: Color, bottom: Color, radius: float = 8.0) -> void:
+	var r: float = min(radius, rect.size.x / 2.0, rect.size.y / 2.0)
+	var strips := int(rect.size.y)  # 1-px strips for crisp corner curve
+	if strips < 4: strips = 4
 	for i in range(strips):
 		var t: float = float(i) / float(strips - 1)
 		var col: Color = top.lerp(bottom, t)
-		var y: float = rect.position.y + float(i) * (rect.size.y / float(strips))
-		ci.draw_rect(Rect2(Vector2(rect.position.x, y), Vector2(rect.size.x, rect.size.y / float(strips) + 1.0)), col)
+		var strip_y: float = float(i) * (rect.size.y / float(strips))
+		var y_in_rect: float = strip_y
+		# Corner inset: how far the rounded edge cuts in at this y
+		var inset: float = 0.0
+		if y_in_rect < r:
+			# Top arc
+			var dy: float = r - y_in_rect
+			inset = r - sqrt(max(0.0, r * r - dy * dy))
+		elif y_in_rect > rect.size.y - r:
+			# Bottom arc
+			var dy2: float = y_in_rect - (rect.size.y - r)
+			inset = r - sqrt(max(0.0, r * r - dy2 * dy2))
+		var strip_w: float = rect.size.x - inset * 2.0
+		if strip_w <= 0:
+			continue
+		ci.draw_rect(Rect2(
+			Vector2(rect.position.x + inset, rect.position.y + strip_y),
+			Vector2(strip_w, rect.size.y / float(strips) + 1.0)
+		), col)
 
 static func _draw_rounded_outline(ci: CanvasItem, rect: Rect2, radius: float, color: Color, filled: bool, width: float) -> void:
 	var r: float = min(radius, rect.size.x / 2.0, rect.size.y / 2.0)
