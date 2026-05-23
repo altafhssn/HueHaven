@@ -1,8 +1,8 @@
 extends Node
 
-# Audio dispatcher — central hook point for sfx.
-# Sound files can be plugged in later by populating `streams`; for now this just
-# dispatches named events so the rest of the game can call out at every key moment.
+# Audio + haptics dispatcher — central hook point for sfx and device vibration.
+# Sound files can be plugged in later by populating `streams`; the haptics
+# table is consulted on every call() so phones buzz on key game events.
 
 const EVENTS = [
 	"select",
@@ -19,12 +19,36 @@ const EVENTS = [
 	"hourglass_use",
 ]
 
+# Per-event haptic strength in milliseconds. 0 disables.
+const HAPTICS: Dictionary = {
+	"select":        15,
+	"deselect":      0,
+	"move":          12,
+	"invalid":       45,    # noticeable thud on bad move
+	"complete_tube": 25,
+	"undo":          10,
+	"win":           120,   # celebratory long buzz
+	"stuck":         60,
+	"bomb_tick":     0,
+	"bomb_explode":  90,
+	"magnet_pull":   30,
+	"hourglass_use": 20,
+}
+
 var muted: bool = false
+var haptics_enabled: bool = true
 
 # Optional: name -> AudioStream. If set, will be played via a transient player.
 var streams: Dictionary = {}
 
 func play(event: String) -> void:
+	# Haptic pulse — fires regardless of mute (audio + vibration are separate concerns)
+	if haptics_enabled:
+		var dur: int = int(HAPTICS.get(event, 0))
+		if dur > 0:
+			Input.vibrate_handheld(dur)
+
+	# Audio
 	if muted:
 		return
 	if not streams.has(event):
@@ -41,3 +65,6 @@ func play(event: String) -> void:
 
 func set_muted(value: bool) -> void:
 	muted = value
+
+func set_haptics_enabled(value: bool) -> void:
+	haptics_enabled = value

@@ -10,6 +10,7 @@ var main_ref = null
 var progression = null
 var cb_btn = null
 var mute_btn = null
+var haptic_btn = null
 var reset_btn = null
 
 func _ready():
@@ -54,9 +55,14 @@ func _ready():
 		Vector2(24, viewport.y * 0.20 + 84), viewport.x - 48)
 	add_child(mute_btn)
 
+	# Haptics toggle row
+	haptic_btn = _make_row("Haptics", _on_toggle_haptics,
+		Vector2(24, viewport.y * 0.20 + 144), viewport.x - 48)
+	add_child(haptic_btn)
+
 	# Group label "Data"
 	add_child(StyleScript.make_label("DATA", 11, StyleScript.TEXT_DIM,
-		Vector2(24, viewport.y * 0.20 + 170), Vector2(viewport.x - 48, 18),
+		Vector2(24, viewport.y * 0.20 + 230), Vector2(viewport.x - 48, 18),
 		HORIZONTAL_ALIGNMENT_LEFT))
 
 	# Reset progress button
@@ -66,7 +72,7 @@ func _ready():
 	StyleScript.style_button(reset_btn, false)
 	reset_btn.add_theme_color_override("font_color", StyleScript.DANGER)
 	reset_btn.size = Vector2(viewport.x - 48, 48)
-	reset_btn.position = Vector2(24, viewport.y * 0.20 + 194)
+	reset_btn.position = Vector2(24, viewport.y * 0.20 + 254)
 	reset_btn.pressed.connect(_on_reset)
 	reset_btn.focus_mode = Control.FOCUS_NONE
 	add_child(reset_btn)
@@ -93,11 +99,14 @@ func _make_row(label_text: String, callback: Callable, pos: Vector2, w: float) -
 func _refresh():
 	var colorblind_on: bool = progression.is_colorblind()
 	var sound_on: bool = not progression.is_muted()
+	var haptics_on: bool = progression.is_haptics_enabled()
 	if main_ref:
 		colorblind_on = main_ref.is_colorblind()
 		sound_on = not main_ref.is_muted()
+		haptics_on = main_ref.is_haptics_enabled()
 	cb_btn.text = "  Colorblind shapes" + _suffix(colorblind_on)
 	mute_btn.text = "  Sound" + _suffix(sound_on)
+	haptic_btn.text = "  Haptics" + _suffix(haptics_on)
 
 func _suffix(on: bool) -> String:
 	return "                                   ON " if on else "                                   OFF"
@@ -110,6 +119,11 @@ func _on_toggle_cb():
 func _on_toggle_mute():
 	if main_ref:
 		main_ref.toggle_mute()
+	_refresh()
+
+func _on_toggle_haptics():
+	if main_ref:
+		main_ref.toggle_haptics()
 	_refresh()
 
 func _on_reset():
