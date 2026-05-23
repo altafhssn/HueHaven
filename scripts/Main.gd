@@ -209,24 +209,8 @@ func _draw():
 	var n_tubes = tubes.size()
 	var capacity = level_data.capacity
 	
-	# Atmospheric background (animated soft orbs)
+	# Atmospheric background (animated warm glows)
 	StyleScript.draw_animated_background(self, viewport_size, Time.get_ticks_msec() / 1000.0)
-
-	# Soft stage backdrop behind the tubes — gives the play area weight
-	var stage_pad_x: float = 12.0
-	var stage_pad_y: float = 18.0
-	var stage_rect = Rect2(
-		grid_offset.x - stage_pad_x,
-		grid_offset.y - stage_pad_y,
-		n_tubes * (tube_width + _tube_gap) - _tube_gap + stage_pad_x * 2,
-		tube_height + stage_pad_y * 2
-	)
-	# Drop shadow
-	draw_rounded_rect(Rect2(stage_rect.position + Vector2(0, 4), stage_rect.size),
-		Color(0, 0, 0, 0.25), 18, true)
-	# Stage fill — subtly lighter than bg
-	draw_rounded_rect(stage_rect, Color(StyleScript.PANEL.r, StyleScript.PANEL.g, StyleScript.PANEL.b, 0.55), 18, true)
-	draw_rounded_rect(stage_rect, StyleScript.PANEL_BORDER, 18, false, 1.0)
 
 	# Draw each tube
 	for i in range(n_tubes):
@@ -238,33 +222,31 @@ func _draw():
 		var tube_x = grid_offset.x + i * (tube_width + _tube_gap) + shake_x
 		var tube_rect = Rect2(tube_x, grid_offset.y, tube_width, tube_height)
 
-		# Soft drop shadow under tube
-		var shadow_rect = Rect2(tube_rect.position + Vector2(2, 4), tube_rect.size)
-		draw_rounded_rect(shadow_rect, Color(0, 0, 0, 0.25), 12, true)
+		# Selected: soft outer accent glow (rendered first, behind tube)
+		if selected_tube == i:
+			for k in range(3):
+				var grow := tube_rect.grow(4.0 + float(k) * 3.0)
+				var a := 0.18 / float(k + 1)
+				draw_rounded_rect(grow, Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, a), 14 + k * 3, true)
 
-		# Tube body — gradient deep navy → near-black
+		# Tube body — flat warm dark fill, very subtle gradient
 		var bg_top = StyleScript.TUBE_BG_HI
 		var bg_bot = StyleScript.TUBE_BG
-		if selected_tube == i:
-			bg_top = Color("#3a3260")
-			bg_bot = Color("#2a2448")
-		StyleScript.draw_gradient_rect(self, tube_rect, bg_top, bg_bot, 12.0)
-		# Inner top highlight (glass effect)
-		draw_rect(Rect2(tube_rect.position + Vector2(3, 3), Vector2(tube_rect.size.x - 6, 3)),
-			Color(1, 1, 1, 0.06))
-		# Inner bottom shadow
-		draw_rect(Rect2(tube_rect.position + Vector2(3, tube_rect.size.y - 8), Vector2(tube_rect.size.x - 6, 4)),
+		StyleScript.draw_gradient_rect(self, tube_rect, bg_top, bg_bot, 14.0)
+
+		# Inner top highlight — single thin warm line, very subtle
+		draw_rect(Rect2(tube_rect.position + Vector2(4, 4), Vector2(tube_rect.size.x - 8, 1)),
+			Color(0.95, 0.85, 0.70, 0.10))
+
+		# Inner bottom shadow — deepens the floor
+		draw_rect(Rect2(tube_rect.position + Vector2(4, tube_rect.size.y - 6), Vector2(tube_rect.size.x - 8, 4)),
 			StyleScript.TUBE_INNER_SHADOW)
-		# Outline
+
+		# Outline — very subtle warm border
 		var border_col = StyleScript.TUBE_BORDER
 		if selected_tube == i:
 			border_col = StyleScript.ACCENT
-		draw_rounded_rect(tube_rect, border_col, 12, false, 1.5)
-
-		if selected_tube == i:
-			# Soft accent ring
-			var glow_rect = tube_rect.grow(3)
-			draw_rounded_rect(glow_rect, Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, 0.5), 14, false, 2.0)
+		draw_rounded_rect(tube_rect, border_col, 14, false, 1.0)
 		
 		# Draw balls in tube (bottom to top).
 		# When a move is animating, the source tube's top ball is the one

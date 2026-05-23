@@ -62,31 +62,31 @@ func _setup_hud():
 	level_name_label.size = Vector2(vp.x, 22)
 	add_child(level_name_label)
 
-	# Moves chip — pill background, centered just below level name
+	# Moves chip — pill, centered just below level name
 	var chip := Panel.new()
 	chip.name = "MovesChip"
-	chip.size = Vector2(110, 28)
-	chip.position = Vector2((vp.x - 110) / 2, 52)
+	chip.size = Vector2(120, 26)
+	chip.position = Vector2((vp.x - 120) / 2, 50)
 	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var chip_style := StyleBoxFlat.new()
 	chip_style.bg_color = StyleScript.PANEL
 	chip_style.border_color = StyleScript.PANEL_BORDER
 	chip_style.set_border_width_all(1)
-	chip_style.corner_radius_top_left = 14
-	chip_style.corner_radius_top_right = 14
-	chip_style.corner_radius_bottom_left = 14
-	chip_style.corner_radius_bottom_right = 14
+	chip_style.corner_radius_top_left = 13
+	chip_style.corner_radius_top_right = 13
+	chip_style.corner_radius_bottom_left = 13
+	chip_style.corner_radius_bottom_right = 13
 	chip.add_theme_stylebox_override("panel", chip_style)
 	add_child(chip)
 
 	move_label = Label.new()
 	move_label.text = "0 moves"
 	move_label.add_theme_font_size_override("font_size", 12)
-	move_label.add_theme_color_override("font_color", StyleScript.TEXT)
+	move_label.add_theme_color_override("font_color", StyleScript.TEXT_MUTED)
 	move_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	move_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	move_label.position = Vector2((vp.x - 110) / 2, 52)
-	move_label.size = Vector2(110, 28)
+	move_label.position = Vector2((vp.x - 120) / 2, 50)
+	move_label.size = Vector2(120, 26)
 	move_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(move_label)
 
@@ -98,12 +98,10 @@ func _setup_hud():
 	bar.position = Vector2(0, vp.y - bar_h)
 	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var bar_style := StyleBoxFlat.new()
-	bar_style.bg_color = StyleScript.PANEL
+	# Translucent surface so the animated background still bleeds through
+	bar_style.bg_color = Color(StyleScript.PANEL.r, StyleScript.PANEL.g, StyleScript.PANEL.b, 0.85)
 	bar_style.border_color = StyleScript.PANEL_BORDER
 	bar_style.border_width_top = 1
-	bar_style.shadow_color = Color(0.18, 0.13, 0.07, 0.10)
-	bar_style.shadow_size = 6
-	bar_style.shadow_offset = Vector2(0, -2)
 	bar.add_theme_stylebox_override("panel", bar_style)
 	add_child(bar)
 
