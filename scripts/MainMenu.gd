@@ -59,8 +59,7 @@ func _process(delta):
 
 func _draw():
 	var viewport = get_viewport().get_visible_rect().size
-	StyleScript.draw_background(self, viewport)
-	StyleScript.draw_stars(self, viewport)
+	StyleScript.draw_animated_background(self, viewport, time_t)
 
 	# Decorative tubes at the top — three sample tubes with sample balls
 	_draw_hero_tubes(viewport)

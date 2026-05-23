@@ -195,7 +195,9 @@ func _on_back_to_menu():
 	if main_ref:
 		main_ref.show_main_menu()
 
+func _process(_delta):
+	queue_redraw()
+
 func _draw():
 	var viewport = get_viewport().get_visible_rect().size
-	StyleScript.draw_background(self, viewport)
-	StyleScript.draw_stars(self, viewport, 5)
+	StyleScript.draw_animated_background(self, viewport, Time.get_ticks_msec() / 1000.0)

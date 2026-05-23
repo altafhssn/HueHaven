@@ -106,6 +106,52 @@ static func draw_background(ci: CanvasItem, viewport: Vector2) -> void:
 	# Soft terracotta wash near top (warm spotlight)
 	ci.draw_circle(Vector2(viewport.x * 0.5, -120), viewport.x * 0.9, Color(ACCENT.r, ACCENT.g, ACCENT.b, 0.05))
 
+# Animated background — slowly drifting soft orbs over the cream gradient.
+# Call every frame with the elapsed time `t` (seconds).
+static func draw_animated_background(ci: CanvasItem, viewport: Vector2, t: float) -> void:
+	# Cream base
+	ci.draw_rect(Rect2(Vector2.ZERO, viewport), BG_TOP)
+	var bands := 20
+	for i in range(bands):
+		var grad_t: float = float(i) / float(bands - 1)
+		var col: Color = BG_TOP.lerp(BG_BOTTOM, grad_t)
+		var y: float = viewport.y * float(i) / float(bands)
+		var h: float = viewport.y / float(bands) + 1.0
+		ci.draw_rect(Rect2(Vector2(0, y), Vector2(viewport.x, h)), col)
+
+	# Drifting orbs — each has its own size, color tint, speed, and lissajous-style path.
+	# Center of viewport for normalised positions.
+	var cx: float = viewport.x * 0.5
+	var cy: float = viewport.y * 0.5
+	var orbs := [
+		# [tint, radius, speed_x, speed_y, amp_x, amp_y, phase]
+		[Color(ACCENT.r, ACCENT.g, ACCENT.b, 1.0),    viewport.x * 0.55, 0.07, 0.05, viewport.x * 0.35, viewport.y * 0.30, 0.0],
+		[Color(SUCCESS.r, SUCCESS.g, SUCCESS.b, 1.0), viewport.x * 0.42, 0.09, 0.06, viewport.x * 0.40, viewport.y * 0.25, 1.7],
+		[Color(STAR.r, STAR.g, STAR.b, 1.0),          viewport.x * 0.45, 0.05, 0.08, viewport.x * 0.30, viewport.y * 0.32, 3.4],
+		[Color(0.36, 0.45, 0.62, 1.0),                viewport.x * 0.38, 0.06, 0.045, viewport.x * 0.42, viewport.y * 0.28, 5.1],
+		[Color(0.78, 0.45, 0.62, 1.0),                viewport.x * 0.40, 0.08, 0.07, viewport.x * 0.32, viewport.y * 0.34, 2.3],
+	]
+
+	for orb in orbs:
+		var tint: Color = orb[0]
+		var radius: float = orb[1]
+		var sx: float = orb[2]
+		var sy: float = orb[3]
+		var amp_x: float = orb[4]
+		var amp_y: float = orb[5]
+		var phase: float = orb[6]
+		var px: float = cx + sin(t * sx + phase) * amp_x
+		var py: float = cy + cos(t * sy + phase * 0.7) * amp_y
+		# Soft falloff via three stacked circles with decreasing alpha
+		var a: float = 0.07
+		ci.draw_circle(Vector2(px, py), radius, Color(tint.r, tint.g, tint.b, a))
+		ci.draw_circle(Vector2(px, py), radius * 0.75, Color(tint.r, tint.g, tint.b, a * 1.2))
+		ci.draw_circle(Vector2(px, py), radius * 0.50, Color(tint.r, tint.g, tint.b, a * 1.5))
+
+	# Top spotlight (anchored, gives a warm ambient feel)
+	ci.draw_circle(Vector2(viewport.x * 0.5, -120), viewport.x * 0.95,
+		Color(ACCENT.r, ACCENT.g, ACCENT.b, 0.04))
+
 # Subtle paper-grain dots — replaces the cold starfield.
 static func draw_stars(ci: CanvasItem, viewport: Vector2, seed_val: int = 7) -> void:
 	var rng := RandomNumberGenerator.new()

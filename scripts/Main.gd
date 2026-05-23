@@ -209,8 +209,8 @@ func _draw():
 	var n_tubes = tubes.size()
 	var capacity = level_data.capacity
 	
-	# Atmospheric background
-	StyleScript.draw_background(self, viewport_size)
+	# Atmospheric background (animated soft orbs)
+	StyleScript.draw_animated_background(self, viewport_size, Time.get_ticks_msec() / 1000.0)
 
 	# Soft stage backdrop behind the tubes — gives the play area weight
 	var stage_pad_x: float = 12.0
