@@ -326,7 +326,8 @@ static func _draw_scifi_bg(ci: CanvasItem, viewport: Vector2, t: float) -> void:
 		ci.draw_rect(Rect2(px, py, 56, 18), Color("#0a1428"))
 		ci.draw_rect(Rect2(px, py, 56, 18), Color("#2a4870"), false)
 		# Screen content — colored dot
-		var dot_color := [Color("#3acfff"), Color("#9affb0"), Color("#ff6a8a"), Color("#ffd066")][panel_i % 4]
+		var dot_palette: Array = [Color("#3acfff"), Color("#9affb0"), Color("#ff6a8a"), Color("#ffd066")]
+		var dot_color: Color = dot_palette[panel_i % 4]
 		var dot_pulse: float = 0.5 + 0.5 * sin(t * 2.0 + float(panel_i))
 		ci.draw_circle(Vector2(px + 10 + (panel_i % 3) * 14, py + 9), 2.5,
 			Color(dot_color.r, dot_color.g, dot_color.b, 0.6 + 0.4 * dot_pulse))
