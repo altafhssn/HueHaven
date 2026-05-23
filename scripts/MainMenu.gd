@@ -123,44 +123,42 @@ func _draw_logo(viewport: Vector2):
 		Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, 0.14),
 		icon_r)
 
-	# ----- (3) Test tube — glass vial silhouette centered in the icon -----
-	var tube_w: float = icon_size * 0.42
-	var tube_h: float = icon_size * 0.72
+	# ----- (3) Test tube — capsule-shaped glass vial centered in the icon -----
+	var tube_w: float = icon_size * 0.38
+	var tube_h: float = icon_size * 0.80
 	var tube_x: float = cx - tube_w * 0.5
 	var tube_y: float = cy - tube_h * 0.5
 	var tube_rect := Rect2(tube_x, tube_y, tube_w, tube_h)
-	var tube_corner_r: float = tube_w * 0.40   # very rounded so bottom = U-shape
+	var tube_corner_r: float = tube_w * 0.50   # full-radius => capsule shape
 
 	# Tube backdrop tint (slight cool wash so the glass reads)
-	StyleScript.draw_rounded_rect(self, tube_rect, Color(0.55, 0.78, 0.95, 0.04), tube_corner_r, true)
+	StyleScript.draw_rounded_rect(self, tube_rect, Color(0.55, 0.78, 0.95, 0.06), tube_corner_r, true)
 	# Tube body gradient (translucent, brighter at top)
 	StyleScript.draw_gradient_rect(self, tube_rect,
-		Color(0.65, 0.85, 0.98, 0.16),
-		Color(0.35, 0.55, 0.75, 0.10),
+		Color(0.65, 0.85, 0.98, 0.14),
+		Color(0.35, 0.55, 0.75, 0.08),
 		tube_corner_r)
 	# Tube outer rim — thin warm-tinted border
 	StyleScript.draw_rounded_rect(self, tube_rect,
-		Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, 0.55),
-		tube_corner_r, false, 1.8)
+		Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, 0.50),
+		tube_corner_r, false, 1.6)
 	# Left edge vertical highlight (light catching the glass)
-	draw_rect(Rect2(tube_x + 4, tube_y + 14, 2, tube_h - 28), Color(1, 1, 1, 0.25))
-	# Brighter rim on the upper lip
-	draw_rect(Rect2(tube_x + tube_w * 0.20, tube_y + 2, tube_w * 0.60, 2), Color(1, 1, 1, 0.30))
+	draw_rect(Rect2(tube_x + 3, tube_y + tube_corner_r * 0.5, 2, tube_h - tube_corner_r), Color(1, 1, 1, 0.22))
 
-	# ----- (4) Four stacked colored balls inside the tube -----
-	var ball_r: float = tube_w * 0.34
-	var ball_step: float = ball_r * 2.0 + 1.0
-	# Balls sit from bottom up
+	# ----- (4) Three stacked color balls inside the tube -----
+	# Sized + spaced so they sit comfortably without touching the tube ends.
+	var ball_r: float = tube_w * 0.32
+	var inner_pad: float = ball_r * 0.4 + 2.0
+	var top_y: float = tube_y + inner_pad + ball_r
+	var bot_y: float = tube_y + tube_h - inner_pad - ball_r
+	var step_y: float = (bot_y - top_y) / 2.0
 	var ball_colors := [
+		Color("#FF8C5A"),  # warm coral (top)
+		Color("#7AB8C4"),  # pale teal (middle)
 		Color("#7DBE82"),  # sage green (bottom)
-		Color("#7AB8C4"),  # pale teal
-		Color("#C46E70"),  # coral red
-		Color("#FF8C5A"),  # warm coral/orange (top)
 	]
-	var bottom_center_y: float = tube_y + tube_h - tube_corner_r * 0.4 - ball_r
 	for i in range(ball_colors.size()):
-		var by: float = bottom_center_y - float(i) * (ball_step * 0.92)
-		# Subtle inset so the topmost ball doesn't push above the lip
+		var by: float = top_y + float(i) * step_y
 		_draw_logo_ball(Vector2(cx, by), ball_r, ball_colors[i])
 
 	# ----- (5) Subtle accent border around the whole icon -----
