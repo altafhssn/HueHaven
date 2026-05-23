@@ -80,7 +80,7 @@ static func _generate_puzzle(colors: int, capacity: int, empty_tubes: int, scram
 			break
 		attempts += 1
 
-	var par_moves := max(1, ceili(float(scramble_moves) * par_mult * (1.0 + float(colors) / 10.0)))
+	var par_moves: int = int(max(1, ceili(float(scramble_moves) * par_mult * (1.0 + float(colors) / 10.0))))
 
 	var contents := []
 	for t in tubes:
