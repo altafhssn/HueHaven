@@ -70,7 +70,7 @@ func _build_tiles(viewport: Vector2):
 	for i in range(packs.size()):
 		var pack = packs[i]
 		var col: int = i % COLS
-		var row: int = i / COLS
+		var row: int = int(i / COLS)
 		var x: float = grid_offset_x + float(col) * (CELL_W + CELL_GAP)
 		var y: float = GRID_TOP + float(row) * (CELL_H + CELL_GAP)
 		var tile := _make_pack_tile(i, pack, start_level, Vector2(x, y))

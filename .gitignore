@@ -3,3 +3,5 @@
 *.translation
 *.mo
 export/
+.claude/worktrees/
+

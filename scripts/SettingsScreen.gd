@@ -91,8 +91,13 @@ func _make_row(label_text: String, callback: Callable, pos: Vector2, w: float) -
 	return b
 
 func _refresh():
-	cb_btn.text = "  Colorblind shapes" + _suffix(progression.is_colorblind())
-	mute_btn.text = "  Sound" + _suffix(not progression.is_muted())
+	var colorblind_on: bool = progression.is_colorblind()
+	var sound_on: bool = not progression.is_muted()
+	if main_ref:
+		colorblind_on = main_ref.is_colorblind()
+		sound_on = not main_ref.is_muted()
+	cb_btn.text = "  Colorblind shapes" + _suffix(colorblind_on)
+	mute_btn.text = "  Sound" + _suffix(sound_on)
 
 func _suffix(on: bool) -> String:
 	return "                                   ON " if on else "                                   OFF"
@@ -108,8 +113,10 @@ func _on_toggle_mute():
 	_refresh()
 
 func _on_reset():
+	if main_ref and main_ref.progression:
+		main_ref.progression.reset_all()
 	if progression:
-		progression.reset_all()
+		progression.load_save()
 	_refresh()
 
 func _on_back():

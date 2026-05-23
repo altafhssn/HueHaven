@@ -104,7 +104,7 @@ func _populate_grid(pack: Dictionary, start_level: int):
 	for i in range(pack.levels):
 		var level_idx: int = start_level + i
 		var col: int = i % COLS
-		var row: int = i / COLS
+		var row: int = int(i / COLS)
 		var x: float = grid_offset_x + float(col) * (CELL_SIZE + CELL_GAP)
 		var y: float = 8.0 + float(row) * (CELL_SIZE + CELL_GAP)
 		var is_unlocked: bool = level_idx <= highest_unlocked
