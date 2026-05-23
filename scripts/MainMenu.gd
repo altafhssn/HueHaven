@@ -80,30 +80,76 @@ func _draw():
 	# Unified themed background — uses underwater for the menu
 	StyleScript.draw_themed_background(self, viewport, time_t, StyleScript.THEME_UNDERWATER)
 
-	# Decorative tubes at the top — three sample tubes with sample balls
-	_draw_hero_tubes(viewport)
-
-	# Title
+	# Logo + title
+	_draw_logo(viewport)
 	_draw_title(viewport)
 
 	# Subtitle
 	var font := ThemeDB.fallback_font
 	var subtitle := "a serene sorting puzzle"
 	var st_size := font.get_string_size(subtitle, HORIZONTAL_ALIGNMENT_LEFT, -1, 13)
-	draw_string(font, Vector2(viewport.x * 0.5 - st_size.x * 0.5, viewport.y * 0.42),
+	draw_string(font, Vector2(viewport.x * 0.5 - st_size.x * 0.5, viewport.y * 0.46),
 		subtitle, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, StyleScript.TEXT_MUTED)
+
+# Logo mark — three overlapping translucent color circles forming a triangle.
+# Represents color (hue) blending into harmony (haven).
+func _draw_logo(viewport: Vector2):
+	var cx: float = viewport.x * 0.5
+	var cy: float = viewport.y * 0.22
+	var r: float = 38.0
+	var sep: float = r * 0.65  # how far each circle is from the center
+
+	# Soft backplate glow
+	draw_circle(Vector2(cx, cy), r * 2.4, Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, 0.07))
+	draw_circle(Vector2(cx, cy), r * 1.7, Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, 0.06))
+
+	# Three circles at 120° apart (top, bottom-left, bottom-right)
+	var positions := [
+		Vector2(cx, cy - sep),                              # top
+		Vector2(cx - sep * 0.866, cy + sep * 0.5),          # bottom-left
+		Vector2(cx + sep * 0.866, cy + sep * 0.5),          # bottom-right
+	]
+	var colors := [
+		Color("#ff8c5a"),  # warm orange (terracotta)
+		Color("#4f9fc8"),  # cool blue
+		Color("#7ac085"),  # soft green
+	]
+	# Animated tiny pulse — barely-there breathing
+	var pulse: float = 1.0 + 0.02 * sin(time_t * 1.0)
+
+	# Draw each circle in additive-style blending: outer halo, then body, then inner highlight
+	for i in range(3):
+		var c: Color = colors[i]
+		var p: Vector2 = positions[i]
+		var rr: float = r * pulse
+		# Outer halo
+		draw_circle(p, rr * 1.15, Color(c.r, c.g, c.b, 0.18))
+		# Body — translucent so where they overlap the colors mix visually
+		draw_circle(p, rr, Color(c.r, c.g, c.b, 0.72))
+		# Top highlight
+		draw_circle(p + Vector2(-rr * 0.30, -rr * 0.32), rr * 0.32, Color(1, 1, 1, 0.35))
+		draw_circle(p + Vector2(-rr * 0.30, -rr * 0.32), rr * 0.18, Color(1, 1, 1, 0.55))
 
 func _draw_title(viewport: Vector2):
 	var font := ThemeDB.fallback_font
-	var title := "BALL SORT"
+	# "Hue" + "Haven" — two-tone wordmark
+	var hue := "Hue"
+	var haven := "Haven"
 	var title_size := 46
-	var size_a := font.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, title_size)
-	var x := viewport.x * 0.5 - size_a.x * 0.5
-	var y := viewport.y * 0.36
-	# Soft outline glow
-	draw_string_outline(font, Vector2(x, y), title, HORIZONTAL_ALIGNMENT_LEFT, -1, title_size, 8,
-		Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, 0.30))
-	draw_string(font, Vector2(x, y), title, HORIZONTAL_ALIGNMENT_LEFT, -1, title_size, StyleScript.ACCENT)
+	var hue_w: Vector2 = font.get_string_size(hue, HORIZONTAL_ALIGNMENT_LEFT, -1, title_size)
+	var haven_w: Vector2 = font.get_string_size(haven, HORIZONTAL_ALIGNMENT_LEFT, -1, title_size)
+	var total_w: float = hue_w.x + haven_w.x
+	var x0: float = viewport.x * 0.5 - total_w * 0.5
+	var y: float = viewport.y * 0.40
+	# Soft glow underneath the whole title
+	draw_string_outline(font, Vector2(x0, y), hue, HORIZONTAL_ALIGNMENT_LEFT, -1, title_size, 8,
+		Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, 0.25))
+	draw_string_outline(font, Vector2(x0 + hue_w.x, y), haven, HORIZONTAL_ALIGNMENT_LEFT, -1, title_size, 8,
+		Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, 0.25))
+	# "Hue" in cream — the wordmark's calm half
+	draw_string(font, Vector2(x0, y), hue, HORIZONTAL_ALIGNMENT_LEFT, -1, title_size, StyleScript.TEXT)
+	# "Haven" in accent — the wordmark's warm half
+	draw_string(font, Vector2(x0 + hue_w.x, y), haven, HORIZONTAL_ALIGNMENT_LEFT, -1, title_size, StyleScript.ACCENT)
 
 func _draw_hero_tubes(viewport: Vector2):
 	# Three sample tubes with sample stacks — drift gently
