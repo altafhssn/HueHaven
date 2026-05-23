@@ -17,7 +17,6 @@ const CELL_H: float = 180.0
 const CELL_GAP: float = 16.0
 const GRID_TOP: float = 150.0
 
-var total_stars_label: Label = null
 var tiles: Array = []
 
 func _ready():
@@ -35,17 +34,28 @@ func _ready():
 	add_child(StyleScript.make_label("Choose Your Path", 22, StyleScript.TEXT,
 		Vector2(0, 48), Vector2(viewport.x, 30)))
 
-	# Total stars indicator
-	total_stars_label = Label.new()
-	total_stars_label.add_theme_font_size_override("font_size", 13)
-	total_stars_label.add_theme_color_override("font_color", StyleScript.STAR)
-	total_stars_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	total_stars_label.position = Vector2(0, 88)
-	total_stars_label.size = Vector2(viewport.x, 22)
-	add_child(total_stars_label)
+	# Total stars indicator — custom-drawn so the star is geometric, not unicode
+	var stars_holder := Control.new()
+	stars_holder.name = "TotalStarsHolder"
+	stars_holder.position = Vector2(0, 86)
+	stars_holder.size = Vector2(viewport.x, 26)
+	stars_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	stars_holder.draw.connect(func():
+		var stars: int = progression.total_stars() if progression else 0
+		var text: String = str(stars) + " stars earned"
+		var font := ThemeDB.fallback_font
+		var fs: int = 14
+		var text_w: Vector2 = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
+		var total_w: float = 22 + 6 + text_w.x  # star + gap + text
+		var x0: float = (stars_holder.size.x - total_w) * 0.5
+		IconScript.draw(stars_holder, "star", Vector2(x0 + 11, stars_holder.size.y * 0.5), 22, StyleScript.STAR)
+		font.draw_string(stars_holder.get_canvas_item(),
+			Vector2(x0 + 28, stars_holder.size.y * 0.5 + 5),
+			text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, StyleScript.TEXT)
+	)
+	add_child(stars_holder)
 
 	_build_tiles(viewport)
-	_refresh_total()
 
 	set_process(true)
 
@@ -164,14 +174,16 @@ func _draw_pack_tile_content(glyph: Control) -> void:
 		glyph.draw_string(font, Vector2(w * 0.5 - tag_w.x * 0.5, h * 0.62 + 18),
 			tagline, HORIZONTAL_ALIGNMENT_LEFT, -1, tag_size, StyleScript.TEXT_MUTED)
 
-		# Star badge bottom-right
-		var badge_x: float = w - 64
-		var badge_y: float = h - 28
-		StyleScript.draw_rounded_rect(glyph, Rect2(badge_x, badge_y, 56, 22),
-			Color(0, 0, 0, 0.35), 11, true)
-		IconScript.draw(glyph, "star", Vector2(badge_x + 14, badge_y + 11), 14, StyleScript.STAR)
-		glyph.draw_string(ThemeDB.fallback_font, Vector2(badge_x + 24, badge_y + 16),
-			str(pack_stars) + "/" + str(max_stars), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, StyleScript.TEXT)
+		# Star badge bottom-right — bigger star + clearer count
+		var badge_w: float = 80.0
+		var badge_h: float = 30.0
+		var badge_x: float = w - badge_w - 10
+		var badge_y: float = h - badge_h - 10
+		StyleScript.draw_rounded_rect(glyph, Rect2(badge_x, badge_y, badge_w, badge_h),
+			Color(0, 0, 0, 0.45), badge_h * 0.5, true)
+		IconScript.draw(glyph, "star", Vector2(badge_x + 17, badge_y + badge_h * 0.5), 24, StyleScript.STAR)
+		glyph.draw_string(ThemeDB.fallback_font, Vector2(badge_x + 32, badge_y + badge_h * 0.5 + 5),
+			str(pack_stars) + "/" + str(max_stars), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, StyleScript.TEXT)
 	else:
 		# Locked — show lock icon + threshold
 		IconScript.draw(glyph, "lock", Vector2(w * 0.5, h * 0.42), 48, StyleScript.TEXT_MUTED)
@@ -209,10 +221,6 @@ func _pressed_style(base: StyleBoxFlat) -> StyleBoxFlat:
 	var sb := base.duplicate()
 	sb.bg_color = base.bg_color.darkened(0.08)
 	return sb
-
-func _refresh_total():
-	var stars: int = progression.total_stars()
-	total_stars_label.text = "★ " + str(stars) + " stars earned"
 
 func _on_pack_chosen(pack_idx: int):
 	if main_ref:
