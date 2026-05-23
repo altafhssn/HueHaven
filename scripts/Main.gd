@@ -15,11 +15,12 @@ var game_state = null
 var tube_grid = null
 var hud = null
 var main_menu = null
+var pack_select = null
 var level_select = null
 var settings_screen = null
 var progression = null
 
-var screen_state: String = "menu"  # "menu" | "select" | "settings" | "game"
+var screen_state: String = "menu"  # "menu" | "packs" | "levels" | "settings" | "game"
 
 var selected_tube: int = -1
 var selected_ball_lift: float = 0.0
@@ -79,6 +80,9 @@ func _clear_screens():
 	if main_menu and is_instance_valid(main_menu):
 		main_menu.queue_free()
 		main_menu = null
+	if pack_select and is_instance_valid(pack_select):
+		pack_select.queue_free()
+		pack_select = null
 	if level_select and is_instance_valid(level_select):
 		level_select.queue_free()
 		level_select = null
@@ -98,8 +102,24 @@ func show_main_menu():
 	add_child(main_menu)
 	queue_redraw()
 
+func show_pack_select():
+	screen_state = "packs"
+	is_showing_level_select = true
+	win_shown = false
+	if hud: hud.visible = false
+	_clear_screens()
+	var PS = preload("res://scripts/PackSelect.gd")
+	pack_select = PS.new()
+	pack_select.main_ref = self
+	add_child(pack_select)
+	queue_redraw()
+
 func show_level_select():
-	screen_state = "select"
+	# Legacy entry — routes through pack select now
+	show_pack_select()
+
+func show_level_select_for_pack(pack_idx: int):
+	screen_state = "levels"
 	is_showing_level_select = true
 	win_shown = false
 	if hud: hud.visible = false
@@ -107,6 +127,7 @@ func show_level_select():
 	var LSClass = preload("res://scripts/LevelSelect.gd")
 	level_select = LSClass.new()
 	level_select.main_ref = self
+	level_select.pack_index = pack_idx
 	add_child(level_select)
 	queue_redraw()
 
@@ -731,7 +752,18 @@ func next_level():
 		show_level_select()
 
 func back_to_menu():
-	show_level_select()
+	# Return to the level grid of the current pack
+	var pack_idx: int = _current_pack_index()
+	show_level_select_for_pack(pack_idx)
+
+func _current_pack_index() -> int:
+	var packs = LevelGeneratorScript.get_packs()
+	var cum := 0
+	for i in range(packs.size()):
+		cum += packs[i].levels
+		if current_level_idx < cum:
+			return i
+	return 0
 
 func get_current_level() -> int:
 	return current_level_idx
@@ -742,15 +774,7 @@ func get_game_state():
 func _current_theme() -> int:
 	if not is_using_generated_levels:
 		return StyleScript.THEME_UNDERWATER
-	var pack_info = LevelGeneratorScript.get_pack_info(current_level_idx)
-	# Map global pack_start to its index
-	var packs = LevelGeneratorScript.get_packs()
-	var cum := 0
-	for i in range(packs.size()):
-		if pack_info.pack_start == cum:
-			return StyleScript.theme_for_pack(i)
-		cum += packs[i].levels
-	return StyleScript.THEME_UNDERWATER
+	return StyleScript.theme_for_pack(_current_pack_index())
 
 func get_current_level_name() -> String:
 	if is_using_generated_levels:

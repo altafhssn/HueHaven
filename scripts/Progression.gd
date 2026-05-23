@@ -40,6 +40,21 @@ func unlock_level(level_idx: int):
 func is_level_unlocked(level_idx: int) -> bool:
 	return level_idx <= get_highest_unlocked()
 
+# Sum of all stars earned across every level
+func total_stars() -> int:
+	var sum: int = 0
+	if save_data.has("stars"):
+		for v in save_data.stars.values():
+			sum += int(v)
+	return sum
+
+# Sum of stars earned within a specific pack range
+func pack_stars(start_idx: int, count: int) -> int:
+	var sum: int = 0
+	for i in range(count):
+		sum += get_stars(start_idx + i)
+	return sum
+
 # --- Settings ---
 
 func get_setting(key: String, default_value):

@@ -17,14 +17,16 @@ const DIFFICULTY_PRESETS = {
 	"master":     { "colors": 10, "empty_tubes": 1, "capacity": 4, "scramble_moves": 250, "par_mult": 2.2, "min_disorder": 22, "specials": ["rainbow", "stone", "magnet", "bomb", "hourglass"] },
 }
 
-# Level pack definitions
+# Level pack definitions.
+# `unlock_stars` is the minimum total stars (across all previous packs)
+# the player must have to unlock this pack.
 const LEVEL_PACKS = [
-	{ "name": "Tutorial",   "levels": 10,  "difficulty": "very_easy", "min_colors": 3,  "max_colors": 3 },
-	{ "name": "Easy",       "levels": 40,  "difficulty": "easy",      "min_colors": 4,  "max_colors": 4 },
-	{ "name": "Medium",     "levels": 60,  "difficulty": "medium",    "min_colors": 5,  "max_colors": 5 },
-	{ "name": "Hard",       "levels": 100, "difficulty": "hard",      "min_colors": 6,  "max_colors": 6 },
-	{ "name": "Expert",     "levels": 150, "difficulty": "expert",    "min_colors": 7,  "max_colors": 8 },
-	{ "name": "Master",     "levels": 140, "difficulty": "master",    "min_colors": 8,  "max_colors": 10 },
+	{ "name": "Tide",     "tagline": "First currents",    "levels": 10,  "difficulty": "very_easy", "min_colors": 3,  "max_colors": 3,  "unlock_stars": 0 },
+	{ "name": "Spark",    "tagline": "Lab whispers",      "levels": 40,  "difficulty": "easy",      "min_colors": 4,  "max_colors": 4,  "unlock_stars": 8 },
+	{ "name": "Grove",    "tagline": "Hush of leaves",    "levels": 60,  "difficulty": "medium",    "min_colors": 5,  "max_colors": 5,  "unlock_stars": 60 },
+	{ "name": "Orbit",    "tagline": "Distant lights",    "levels": 100, "difficulty": "hard",      "min_colors": 6,  "max_colors": 6,  "unlock_stars": 180 },
+	{ "name": "Ember",    "tagline": "Alchemist's flame", "levels": 150, "difficulty": "expert",    "min_colors": 7,  "max_colors": 8,  "unlock_stars": 360 },
+	{ "name": "Canopy",   "tagline": "Beyond the veil",   "levels": 140, "difficulty": "master",    "min_colors": 8,  "max_colors": 10, "unlock_stars": 660 },
 ]
 
 const TOTAL_LEVELS = 500
