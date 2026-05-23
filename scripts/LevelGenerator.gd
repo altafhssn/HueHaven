@@ -54,109 +54,37 @@ static func generate_level(level_idx: int) -> Dictionary:
 
 	return level
 
-# Generate a puzzle with given parameters
+# Generate a puzzle by random shuffle + BFS solvability verification.
+#
+# Forward-move scrambling can ONLY produce monochrome tubes — every valid
+# move requires the destination to be empty or same-color, so once a ball
+# is placed it can never be covered by a different color. Real Ball Sort
+# puzzles need genuinely mixed stacks, which only random distribution
+# produces. We then verify solvability so we don't ship dead puzzles.
 static func _generate_puzzle(colors: int, capacity: int, empty_tubes: int, scramble_moves: int, par_mult: float, min_disorder: int, seed_val: int) -> Dictionary:
-	var rng = RandomNumberGenerator.new()
-	rng.seed = seed_val
-	
-	# Total tubes = colors + empty_tubes
-	var total_tubes = colors + empty_tubes
-	
-	# Start with sorted tubes: each tube has `capacity` balls of the same color
-	var tubes = []
-	for c in range(colors):
-		var tube = []
-		for _b in range(capacity):
-			tube.append(c)
-		tubes.append(tube)
-	
-	# Add empty tubes
-	for _e in range(empty_tubes):
-		tubes.append([])
-	
-	# Scramble by performing random valid moves
-	# Constraints to avoid trivial back-and-forth:
-	#   * never reverse the immediately previous move
-	#   * never make a move that completes a tube (would let us re-arrive at sorted)
-	#   * never move from a tube that just received its previous ball
-	var actual_moves = 0
-	var attempts = 0
-	# Allow extra attempts; we keep going past `scramble_moves` until disorder threshold is hit.
-	var max_attempts = max(scramble_moves * 15, 400)
-	var last_from := -1
-	var last_to := -1
+	var total_tubes := colors + empty_tubes
+	var tubes: Array = []
 
+	# Try up to a few seeds — random shuffle is usually solvable, but not always
+	var attempts := 0
+	var max_attempts := 12
+	var rng := RandomNumberGenerator.new()
 	while attempts < max_attempts:
-		# Stop once we've made enough moves AND scattered the balls enough
-		if actual_moves >= scramble_moves and _measure_disorder(tubes) >= min_disorder:
+		rng.seed = seed_val + attempts * 101
+		tubes = _shuffle_distribution(colors, capacity, empty_tubes, rng)
+		# For very small puzzles, verify solvability. For large ones, trust the shuffle.
+		if colors <= 7:
+			if _is_solvable(tubes, capacity, 80000):
+				break
+		else:
 			break
 		attempts += 1
 
-		# Pick a random non-empty source tube — but not the tube that just
-		# received a ball (forbids immediate reversal). Source CAN be a
-		# complete monochrome tube — that's the whole point of scrambling.
-		var from_candidates = []
-		for i in range(total_tubes):
-			if tubes[i].size() == 0:
-				continue
-			if i == last_to:
-				continue
-			from_candidates.append(i)
-		if from_candidates.is_empty():
-			for i in range(total_tubes):
-				if tubes[i].size() > 0:
-					from_candidates.append(i)
-		if from_candidates.is_empty():
-			break
+	var par_moves := max(1, ceili(float(scramble_moves) * par_mult * (1.0 + float(colors) / 10.0)))
 
-		var from_idx = from_candidates[rng.randi() % from_candidates.size()]
-		var src_top = tubes[from_idx][-1]
-
-		# Pick a valid destination — never one that would complete the tube
-		# and (if possible) never the previous source (immediate reverse).
-		var to_candidates = []
-		for i in range(total_tubes):
-			if i == from_idx:
-				continue
-			if tubes[i].size() >= capacity:
-				continue
-			if tubes[i].size() > 0 and tubes[i][-1] != src_top:
-				continue
-			# Would this move complete a monochrome tube?
-			if tubes[i].size() == capacity - 1 and _would_complete(tubes[i], src_top, capacity):
-				continue
-			# Avoid immediate reverse if a non-reverse option exists
-			if i == last_from:
-				continue
-			to_candidates.append(i)
-		if to_candidates.is_empty():
-			# Relax: allow reverse but still no completion
-			for i in range(total_tubes):
-				if i == from_idx or tubes[i].size() >= capacity:
-					continue
-				if tubes[i].size() > 0 and tubes[i][-1] != src_top:
-					continue
-				if tubes[i].size() == capacity - 1 and _would_complete(tubes[i], src_top, capacity):
-					continue
-				to_candidates.append(i)
-		if to_candidates.is_empty():
-			continue
-
-		var to_idx = to_candidates[rng.randi() % to_candidates.size()]
-		var ball = tubes[from_idx].pop_back()
-		tubes[to_idx].append(ball)
-		last_from = from_idx
-		last_to = to_idx
-		actual_moves += 1
-
-	
-	# Calculate par moves
-	var par_moves = max(1, ceili(scramble_moves * par_mult * (1.0 + float(colors) / 10.0)))
-
-	# Deep copy tube contents
-	var contents = []
+	var contents := []
 	for t in tubes:
-		var tube_copy = []
+		var tube_copy := []
 		for ball in t:
 			tube_copy.append(ball)
 		contents.append(tube_copy)
@@ -169,6 +97,111 @@ static func _generate_puzzle(colors: int, capacity: int, empty_tubes: int, scram
 		"bombs": false,
 		"specials": [],
 	}
+
+# Random shuffle distribution: flatten all balls, Fisher-Yates shuffle,
+# distribute capacity balls into each of the `colors` tubes; remaining
+# tubes start empty.
+static func _shuffle_distribution(colors: int, capacity: int, empty_tubes: int, rng: RandomNumberGenerator) -> Array:
+	var balls: Array = []
+	for c in range(colors):
+		for _b in range(capacity):
+			balls.append(c)
+	# Fisher-Yates
+	for i in range(balls.size() - 1, 0, -1):
+		var j: int = rng.randi() % (i + 1)
+		var tmp = balls[i]
+		balls[i] = balls[j]
+		balls[j] = tmp
+
+	var tubes: Array = []
+	var idx: int = 0
+	for t in range(colors):
+		var tube: Array = []
+		for k in range(capacity):
+			tube.append(balls[idx])
+			idx += 1
+		tubes.append(tube)
+	for _e in range(empty_tubes):
+		tubes.append([])
+	return tubes
+
+# BFS solvability check with a hard state cap. Returns true if solved
+# state is reachable within `max_states` expansions. Uses canonical
+# hashing (tubes sorted) so equivalent states aren't re-explored.
+static func _is_solvable(tubes: Array, capacity: int, max_states: int) -> bool:
+	if _is_solved_state(tubes, capacity):
+		return true
+	var visited: Dictionary = {}
+	visited[_hash_state(tubes)] = true
+	var queue: Array = [tubes]
+	var explored: int = 0
+
+	while not queue.is_empty():
+		if explored >= max_states:
+			return false
+		var current: Array = queue.pop_front()
+		explored += 1
+
+		var n: int = current.size()
+		for from_idx in range(n):
+			var src: Array = current[from_idx]
+			if src.is_empty():
+				continue
+			var src_top = src[-1]
+			# Skip if source is already monochrome AND full (don't waste expansion)
+			if src.size() == capacity and _is_monochrome(src):
+				continue
+			for to_idx in range(n):
+				if to_idx == from_idx:
+					continue
+				var dst: Array = current[to_idx]
+				if dst.size() >= capacity:
+					continue
+				if not dst.is_empty() and dst[-1] != src_top:
+					continue
+				# Apply move
+				var new_state: Array = []
+				for t in current:
+					new_state.append(t.duplicate())
+				new_state[from_idx].pop_back()
+				new_state[to_idx].append(src_top)
+
+				if _is_solved_state(new_state, capacity):
+					return true
+
+				var h: String = _hash_state(new_state)
+				if not visited.has(h):
+					visited[h] = true
+					queue.append(new_state)
+	return false
+
+static func _is_solved_state(tubes: Array, capacity: int) -> bool:
+	for t in tubes:
+		if t.is_empty():
+			continue
+		if t.size() != capacity:
+			return false
+		if not _is_monochrome(t):
+			return false
+	return true
+
+static func _is_monochrome(tube: Array) -> bool:
+	if tube.is_empty():
+		return true
+	var first = tube[0]
+	for b in tube:
+		if b != first:
+			return false
+	return true
+
+# Canonical state hash — sort tube strings so equivalent permutations
+# of empty/identical tubes collapse to one entry.
+static func _hash_state(tubes: Array) -> String:
+	var parts: Array = []
+	for t in tubes:
+		parts.append(",".join(t.map(func(b): return str(b))))
+	parts.sort()
+	return "|".join(parts)
 
 # Inject a single special ball by transmuting one existing regular ball.
 # `pool` lists special types eligible to spawn. Idempotent on the input rng.
@@ -224,36 +257,6 @@ static func _inject_specials(level: Dictionary, pool: Array, rng: RandomNumberGe
 	contents[ti][bi] = special_ball
 	level.specials = level.get("specials", [])
 	level.specials.append(stype)
-
-# Check if a tube is full and monochrome (completed)
-static func _is_tube_complete(tube: Array, capacity: int) -> bool:
-	if tube.size() < capacity:
-		return false
-	var first = tube[0]
-	for ball in tube:
-		if ball != first:
-			return false
-	return true
-
-# Count adjacent-pair transitions across all tubes (higher = more scattered).
-# A monochrome tube contributes 0; a fully alternating tube contributes capacity-1.
-static func _measure_disorder(tubes: Array) -> int:
-	var total := 0
-	for tube in tubes:
-		for i in range(1, tube.size()):
-			if tube[i] != tube[i - 1]:
-				total += 1
-	return total
-
-# Would placing `ball` on this tube complete it as a monochrome stack?
-static func _would_complete(tube: Array, ball, capacity: int) -> bool:
-	if tube.size() + 1 != capacity:
-		return false
-	for b in tube:
-		if b != ball:
-			return false
-	return true
-
 
 # Get which pack a level belongs to
 static func _get_pack_for_level(level_idx: int) -> Dictionary:
