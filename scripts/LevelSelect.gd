@@ -157,19 +157,19 @@ func _make_level_tile(level_idx: int, pos: Vector2, unlocked: bool, current: boo
 		btn.text = str(level_idx + 1)
 		if stars > 0:
 			var star_strip := Control.new()
-			star_strip.size = Vector2(CELL_SIZE, 14)
-			star_strip.position = Vector2(0, CELL_SIZE - 18)
+			star_strip.size = Vector2(CELL_SIZE, 18)
+			star_strip.position = Vector2(0, CELL_SIZE - 22)
 			star_strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			star_strip.set_meta("count", stars)
 			star_strip.draw.connect(func():
 				var n: int = star_strip.get_meta("count", 0)
-				var star_size: float = 13.0
+				var star_size: float = 18.0
 				var gap: float = 4.0
 				var total: float = float(n) * star_size + float(n - 1) * gap
 				var sx0: float = (star_strip.size.x - total) / 2.0 + star_size * 0.5
 				for s in range(n):
 					var sx: float = sx0 + float(s) * (star_size + gap)
-					IconScript.draw(star_strip, "star", Vector2(sx, 7), star_size, StyleScript.STAR)
+					IconScript.draw(star_strip, "star", Vector2(sx, 9), star_size, StyleScript.STAR)
 			)
 			btn.add_child(star_strip)
 		btn.pressed.connect(_on_level_selected.bind(level_idx))
