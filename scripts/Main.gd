@@ -385,42 +385,46 @@ func _draw_ball(center: Vector2, ball_entry):
 	if color == Color.TRANSPARENT:
 		return
 
-	# Glossy marble draw — layered to approximate a 3D plastic sphere.
-	# (1) Soft cast shadow underneath (deeper on dark bg)
-	draw_circle(center + Vector2(0.5, ball_radius * 0.18), ball_radius * 1.05, Color(0, 0, 0, 0.35))
-	draw_circle(center + Vector2(0.5, ball_radius * 0.22), ball_radius * 0.95, Color(0, 0, 0, 0.20))
+	# Glass bubble draw — translucent body that lets the background tint through,
+	# with a large soft highlight and a subtle bottom reflection.
 
-	# (2) Outer dark rim (a darker shade of body color) — definition on light bg
-	draw_circle(center, ball_radius + 0.6, color.darkened(0.32))
+	# (1) Very soft cast shadow
+	draw_circle(center + Vector2(1.0, ball_radius * 0.22), ball_radius * 1.0, Color(0, 0, 0, 0.22))
 
-	# (3) Body color — slightly darker, the bottom-up gradient adds brightness later
-	draw_circle(center, ball_radius, color.darkened(0.08))
+	# (2) Outer color ring — darker tinted edge for definition
+	var edge_col := color.darkened(0.45)
+	edge_col.a = 0.85
+	draw_circle(center, ball_radius + 0.5, edge_col)
 
-	# (4) Bottom rim light — lighter band at the bottom (like a marble lit from below
-	#     reflecting off the surface). Stacked translucent circles offset downward.
-	var rim_col := color.lightened(0.45)
-	rim_col.a = 0.55
-	draw_circle(center + Vector2(0, ball_radius * 0.18), ball_radius * 0.85, rim_col)
-	rim_col.a = 0.45
-	draw_circle(center + Vector2(0, ball_radius * 0.28), ball_radius * 0.72, rim_col)
+	# (3) Translucent body — main color at moderate opacity
+	var body_col := color
+	body_col.a = 0.78
+	draw_circle(center, ball_radius - 0.5, body_col)
 
-	# (5) Re-cap with body color in the upper hemisphere (preserves color above)
-	#     Using a slightly faded body color on the top half
-	var top_body := color
-	top_body.a = 0.55
-	draw_circle(center + Vector2(0, -ball_radius * 0.18), ball_radius * 0.86, top_body)
+	# (4) Inner color core — slightly more saturated center
+	var core_col := color.lightened(0.10)
+	core_col.a = 0.55
+	draw_circle(center + Vector2(0, ball_radius * 0.05), ball_radius * 0.80, core_col)
 
-	# (6) Big soft top-left highlight (the main reflection) — multiple stacked
-	#     translucent white circles produce a soft falloff
-	var hl_center := center + Vector2(-ball_radius * 0.30, -ball_radius * 0.34)
-	draw_circle(hl_center, ball_radius * 0.55, Color(1, 1, 1, 0.18))
-	draw_circle(hl_center, ball_radius * 0.42, Color(1, 1, 1, 0.30))
-	draw_circle(hl_center, ball_radius * 0.30, Color(1, 1, 1, 0.45))
-	draw_circle(hl_center, ball_radius * 0.18, Color(1, 1, 1, 0.65))
+	# (5) Bottom rim reflection — subtle white crescent (refracted light)
+	var refl_col := Color(1, 1, 1, 0.18)
+	draw_circle(center + Vector2(0, ball_radius * 0.45), ball_radius * 0.55, refl_col)
+	draw_circle(center + Vector2(0, ball_radius * 0.50), ball_radius * 0.40, Color(1, 1, 1, 0.10))
 
-	# (7) Tiny bright specular dot inside the highlight
-	draw_circle(hl_center + Vector2(-ball_radius * 0.08, -ball_radius * 0.08),
-		ball_radius * 0.10, Color(1, 1, 1, 0.95))
+	# (6) Big soft top-left highlight — the main glassy reflection
+	var hl_center := center + Vector2(-ball_radius * 0.28, -ball_radius * 0.38)
+	draw_circle(hl_center, ball_radius * 0.60, Color(1, 1, 1, 0.10))
+	draw_circle(hl_center, ball_radius * 0.48, Color(1, 1, 1, 0.20))
+	draw_circle(hl_center, ball_radius * 0.36, Color(1, 1, 1, 0.36))
+	draw_circle(hl_center, ball_radius * 0.22, Color(1, 1, 1, 0.62))
+	draw_circle(hl_center, ball_radius * 0.12, Color(1, 1, 1, 0.85))
+
+	# (7) Tiny bright specular pinpoint
+	draw_circle(hl_center + Vector2(-ball_radius * 0.06, -ball_radius * 0.06),
+		ball_radius * 0.06, Color(1, 1, 1, 1.0))
+
+	# (8) Inner rim highlight on bottom-right (light wrapping around)
+	draw_arc(center, ball_radius - 1, PI * 0.15, PI * 0.6, 12, Color(1, 1, 1, 0.30), 1.5, true)
 
 	# Color-blind shape marker
 	if colorblind and color_idx >= 0 and stype != "rainbow":
