@@ -10,10 +10,10 @@ var progression = null
 var main_ref = null
 
 var cols: int = 5
-var cell_size: float = 64.0
-var cell_gap: float = 10.0
+var cell_size: float = 72.0
+var cell_gap: float = 12.0
 var grid_start_x: float = 0.0
-var grid_start_y: float = 200.0
+var grid_start_y: float = 196.0
 
 var current_pack_index: int = 0
 var pack_tab_buttons: Array = []
