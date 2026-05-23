@@ -3,6 +3,7 @@ extends CanvasLayer
 # HUD — move counter, undo button, hint button, restart, win overlay
 
 const StyleScript = preload("res://scripts/Style.gd")
+const IconScript = preload("res://scripts/Icon.gd")
 
 var main_ref = null
 
@@ -16,6 +17,7 @@ var level_name_label = null
 var win_overlay = null
 var win_label = null
 var stars_label = null
+var stars_glyph: Control = null
 var next_button = null
 var menu_from_win = null
 
@@ -45,11 +47,11 @@ func _setup_hud():
 	var vp: Vector2 = get_viewport().get_visible_rect().size
 
 	# Menu button (top-left)
-	menu_button = _make_icon_button("←", Vector2(14, 14), 38, _on_menu)
+	menu_button = _make_icon_button("back", Vector2(14, 14), 38, _on_menu)
 	add_child(menu_button)
 
 	# Settings button (top-right)
-	settings_button = _make_icon_button("⚙", Vector2(vp.x - 52, 14), 38, _on_open_settings)
+	settings_button = _make_icon_button("settings", Vector2(vp.x - 52, 14), 38, _on_open_settings)
 	add_child(settings_button)
 
 	# Level name (centered, top) — bold, uppercase, letter-spaced
@@ -115,13 +117,11 @@ func _setup_hud():
 	var start_x: float = (vp.x - total) / 2
 	var btn_y: float = vp.y - bar_h + (bar_h - btn_h) / 2
 
-	undo_button = _make_text_button("↺  Undo", Vector2(start_x, btn_y), btn_w, btn_h, _on_undo)
+	undo_button = _make_action_button("undo", "Undo", Vector2(start_x, btn_y), btn_w, btn_h, _on_undo, false)
 	add_child(undo_button)
-	hint_button = _make_text_button("?  Hint", Vector2(start_x + btn_w + gap, btn_y), btn_w, btn_h, _on_hint)
-	# Hint is the highlighted action — primary style
-	StyleScript.style_button(hint_button, true)
+	hint_button = _make_action_button("hint", "Hint", Vector2(start_x + btn_w + gap, btn_y), btn_w, btn_h, _on_hint, true)
 	add_child(hint_button)
-	restart_button = _make_text_button("↻  Restart", Vector2(start_x + (btn_w + gap) * 2, btn_y), btn_w, btn_h, _on_restart)
+	restart_button = _make_action_button("restart", "Restart", Vector2(start_x + (btn_w + gap) * 2, btn_y), btn_w, btn_h, _on_restart, false)
 	add_child(restart_button)
 	
 	# --- Win overlay: dim + centered card ---
@@ -154,14 +154,30 @@ func _setup_hud():
 	win_label.visible = false
 	add_child(win_label)
 
-	stars_label = Label.new()
-	stars_label.add_theme_font_size_override("font_size", 44)
-	stars_label.add_theme_color_override("font_color", StyleScript.STAR)
-	stars_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	stars_label.position = Vector2(card_x, card_y + 80)
-	stars_label.size = Vector2(card_w, 56)
-	stars_label.visible = false
+	# Stars row — uses a custom-draw Control with geometric stars
+	stars_label = Label.new()  # kept as backing data for compat
+	stars_label.add_theme_font_size_override("font_size", 1)
+	stars_label.modulate.a = 0
 	add_child(stars_label)
+
+	stars_glyph = Control.new()
+	stars_glyph.position = Vector2(card_x, card_y + 80)
+	stars_glyph.size = Vector2(card_w, 64)
+	stars_glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	stars_glyph.visible = false
+	stars_glyph.set_meta("filled", 0)
+	stars_glyph.draw.connect(func():
+		var filled: int = stars_glyph.get_meta("filled", 0)
+		var star_sz: float = 52.0
+		var gap2: float = 14.0
+		var total2: float = 3.0 * star_sz + 2.0 * gap2
+		var sx0: float = (stars_glyph.size.x - total2) * 0.5 + star_sz * 0.5
+		for s in range(3):
+			var sx: float = sx0 + float(s) * (star_sz + gap2)
+			var col := StyleScript.STAR if s < filled else StyleScript.TEXT_DIM
+			IconScript.draw(stars_glyph, "star", Vector2(sx, stars_glyph.size.y * 0.5), star_sz, col)
+	)
+	add_child(stars_glyph)
 
 	next_button = _make_text_button("Next →", Vector2(card_x + 30, card_y + 200), card_w - 60, 44, _on_next)
 	next_button.add_theme_font_size_override("font_size", 16)
@@ -258,6 +274,31 @@ func _card_style() -> StyleBoxFlat:
 	sb.shadow_offset = Vector2(0, 6)
 	return sb
 
+func _make_action_button(icon_name: String, label_text: String, pos: Vector2, w: float, h: float, callback: Callable, primary: bool) -> Button:
+	var btn := Button.new()
+	btn.text = "    " + label_text  # leading space leaves room for icon
+	btn.position = pos
+	btn.size = Vector2(w, h)
+	btn.add_theme_font_size_override("font_size", 15)
+	StyleScript.style_button(btn, primary)
+	btn.pressed.connect(callback)
+	btn.focus_mode = Control.FOCUS_NONE
+	# Icon glyph on the left
+	var glyph := Control.new()
+	glyph.position = Vector2(12, (h - 22) * 0.5)
+	glyph.size = Vector2(22, 22)
+	glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var icon_col: Color = Color("#1a1208") if primary else StyleScript.TEXT
+	glyph.set_meta("icon_name", icon_name)
+	glyph.set_meta("icon_color", icon_col)
+	glyph.draw.connect(func():
+		var name: String = glyph.get_meta("icon_name", "")
+		var col: Color = glyph.get_meta("icon_color", Color.WHITE)
+		IconScript.draw(glyph, name, glyph.size * 0.5, 22, col)
+	)
+	btn.add_child(glyph)
+	return btn
+
 func _make_text_button(text: String, pos: Vector2, w: float, h: float, callback: Callable) -> Button:
 	var btn := Button.new()
 	btn.text = text
@@ -269,15 +310,26 @@ func _make_text_button(text: String, pos: Vector2, w: float, h: float, callback:
 	btn.focus_mode = Control.FOCUS_NONE
 	return btn
 
-func _make_icon_button(text: String, pos: Vector2, sz: float, callback: Callable) -> Button:
+func _make_icon_button(icon_name: String, pos: Vector2, sz: float, callback: Callable) -> Button:
 	var btn := Button.new()
-	btn.text = text
+	btn.text = ""  # icon drawn via child Control
 	btn.position = pos
 	btn.size = Vector2(sz, sz)
-	btn.add_theme_font_size_override("font_size", 20)
 	StyleScript.style_button(btn, false)
 	btn.pressed.connect(callback)
 	btn.focus_mode = Control.FOCUS_NONE
+	# Icon overlay
+	var glyph := Control.new()
+	glyph.size = btn.size
+	glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	glyph.set_meta("icon_name", icon_name)
+	glyph.set_meta("icon_color", StyleScript.TEXT)
+	glyph.draw.connect(func():
+		var name: String = glyph.get_meta("icon_name", "")
+		var col: Color = glyph.get_meta("icon_color", Color.WHITE)
+		IconScript.draw(glyph, name, glyph.size * 0.5, glyph.size.x, col)
+	)
+	btn.add_child(glyph)
 	return btn
 
 # Legacy helpers (still called by older code paths in this file)
@@ -317,14 +369,11 @@ func show_win(stars: int, pack_info: Dictionary):
 	win_label.text = "Level Complete"
 	win_label.visible = true
 
-	# Stars — filled vs empty
-	var star_text = ""
-	for i in range(stars):
-		star_text += "★ "
-	for i in range(3 - stars):
-		star_text += "☆ "
-	stars_label.text = star_text.strip_edges()
-	stars_label.visible = true
+	# Stars — geometric
+	if stars_glyph:
+		stars_glyph.set_meta("filled", stars)
+		stars_glyph.visible = true
+		stars_glyph.queue_redraw()
 
 	# Pack info label
 	var vp: Vector2 = get_viewport().get_visible_rect().size
@@ -349,7 +398,8 @@ func _hide_win():
 	if win_card:
 		win_card.visible = false
 	win_label.visible = false
-	stars_label.visible = false
+	if stars_glyph:
+		stars_glyph.visible = false
 	next_button.visible = false
 	menu_from_win.visible = false
 	var info_label = get_node_or_null("WinInfoLabel")

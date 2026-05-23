@@ -3,6 +3,7 @@ extends Control
 # Level Select — pack tabs + polished tile grid.
 
 const StyleScript = preload("res://scripts/Style.gd")
+const IconScript = preload("res://scripts/Icon.gd")
 var LevelGeneratorScript = preload("res://scripts/LevelGenerator.gd")
 var ProgressionScript = preload("res://scripts/Progression.gd")
 
@@ -27,14 +28,7 @@ func _ready():
 	mouse_filter = Control.MOUSE_FILTER_PASS
 
 	# Back to main menu
-	var back := Button.new()
-	back.text = "←"
-	back.add_theme_font_size_override("font_size", 22)
-	StyleScript.style_button(back, false)
-	back.size = Vector2(48, 48)
-	back.position = Vector2(16, 16)
-	back.pressed.connect(_on_back_to_menu)
-	back.focus_mode = Control.FOCUS_NONE
+	var back := _make_icon_btn("back", Vector2(16, 16), 44, _on_back_to_menu)
 	add_child(back)
 
 	# Title
@@ -166,23 +160,32 @@ func _make_level_button(level_idx: int, pos: Vector2, unlocked: bool, current: b
 	if unlocked:
 		btn.text = str(level_idx + 1)
 		if stars > 0:
-			var star_text := ""
-			for s in range(stars):
-				star_text += "★"
-			for s in range(3 - stars):
-				star_text += "·"
-			var sl := Label.new()
-			sl.text = star_text
-			sl.add_theme_font_size_override("font_size", 10)
-			sl.add_theme_color_override("font_color", StyleScript.STAR)
-			sl.size = Vector2(cell_size, 12)
-			sl.position = Vector2(0, cell_size - 14)
-			sl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			sl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			btn.add_child(sl)
+			# Draw geometric stars at the bottom of the tile
+			var star_strip := Control.new()
+			star_strip.size = Vector2(cell_size, 14)
+			star_strip.position = Vector2(0, cell_size - 16)
+			star_strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			star_strip.set_meta("count", stars)
+			star_strip.draw.connect(func():
+				var n: int = star_strip.get_meta("count", 0)
+				var star_size: float = 12.0
+				var gap: float = 3.0
+				var total: float = float(n) * star_size + float(n - 1) * gap
+				var sx0: float = (star_strip.size.x - total) / 2.0 + star_size * 0.5
+				for s in range(n):
+					var sx: float = sx0 + float(s) * (star_size + gap)
+					IconScript.draw(star_strip, "star", Vector2(sx, 7), star_size, StyleScript.STAR)
+			)
+			btn.add_child(star_strip)
 	else:
-		btn.text = "🔒"
-		btn.add_theme_font_size_override("font_size", 22)
+		btn.text = ""
+		var lock_glyph := Control.new()
+		lock_glyph.size = btn.size
+		lock_glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		lock_glyph.draw.connect(func():
+			IconScript.draw(lock_glyph, "lock", lock_glyph.size * 0.5, lock_glyph.size.x * 0.8, StyleScript.TEXT_DIM)
+		)
+		btn.add_child(lock_glyph)
 
 	btn.pressed.connect(_on_level_selected.bind(level_idx))
 	return btn
@@ -194,6 +197,24 @@ func _on_level_selected(level_idx: int):
 func _on_back_to_menu():
 	if main_ref:
 		main_ref.show_main_menu()
+
+func _make_icon_btn(icon_name: String, pos: Vector2, sz: float, callback: Callable) -> Button:
+	var btn := Button.new()
+	btn.text = ""
+	btn.position = pos
+	btn.size = Vector2(sz, sz)
+	StyleScript.style_button(btn, false)
+	btn.pressed.connect(callback)
+	btn.focus_mode = Control.FOCUS_NONE
+	var glyph := Control.new()
+	glyph.size = btn.size
+	glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	glyph.set_meta("icon_name", icon_name)
+	glyph.draw.connect(func():
+		IconScript.draw(glyph, glyph.get_meta("icon_name", ""), glyph.size * 0.5, glyph.size.x, StyleScript.TEXT)
+	)
+	btn.add_child(glyph)
+	return btn
 
 func _process(_delta):
 	queue_redraw()

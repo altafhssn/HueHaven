@@ -4,6 +4,7 @@ extends Control
 
 const StyleScript = preload("res://scripts/Style.gd")
 const ProgressionScript = preload("res://scripts/Progression.gd")
+const IconScript = preload("res://scripts/Icon.gd")
 
 var main_ref = null
 var progression = null
@@ -17,15 +18,21 @@ func _ready():
 	size = viewport
 	mouse_filter = Control.MOUSE_FILTER_PASS
 
-	# Back button (top-left)
+	# Back button (top-left) — geometric icon
 	var back := Button.new()
-	back.text = "←"
-	back.add_theme_font_size_override("font_size", 22)
-	StyleScript.style_button(back, false)
-	back.size = Vector2(48, 48)
+	back.text = ""
+	back.size = Vector2(44, 44)
 	back.position = Vector2(16, 16)
+	StyleScript.style_button(back, false)
 	back.pressed.connect(_on_back)
 	back.focus_mode = Control.FOCUS_NONE
+	var back_glyph := Control.new()
+	back_glyph.size = back.size
+	back_glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	back_glyph.draw.connect(func():
+		IconScript.draw(back_glyph, "back", back_glyph.size * 0.5, back_glyph.size.x, StyleScript.TEXT)
+	)
+	back.add_child(back_glyph)
 	add_child(back)
 
 	# Title

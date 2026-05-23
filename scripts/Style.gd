@@ -420,16 +420,30 @@ static func draw_gradient_rect(ci: CanvasItem, rect: Rect2, top: Color, bottom: 
 
 static func _draw_rounded_outline(ci: CanvasItem, rect: Rect2, radius: float, color: Color, filled: bool, width: float) -> void:
 	var r: float = min(radius, rect.size.x / 2.0, rect.size.y / 2.0)
-	var pts := PackedVector2Array([
-		rect.position + Vector2(r, 0),
-		rect.position + Vector2(rect.size.x - r, 0),
-		rect.position + Vector2(rect.size.x, r),
-		rect.position + Vector2(rect.size.x, rect.size.y - r),
-		rect.position + Vector2(rect.size.x - r, rect.size.y),
-		rect.position + Vector2(r, rect.size.y),
-		rect.position + Vector2(0, rect.size.y - r),
-		rect.position + Vector2(0, r),
-	])
+	# 8 segments per corner = smooth without being expensive
+	var corner_segments := 8
+	var pts := PackedVector2Array()
+	# Top-right corner (sweep -90° → 0°)
+	var tr := rect.position + Vector2(rect.size.x - r, r)
+	for i in range(corner_segments + 1):
+		var angle: float = -PI * 0.5 + (PI * 0.5) * float(i) / float(corner_segments)
+		pts.append(tr + Vector2(cos(angle), sin(angle)) * r)
+	# Bottom-right corner (0° → 90°)
+	var br := rect.position + Vector2(rect.size.x - r, rect.size.y - r)
+	for i in range(corner_segments + 1):
+		var angle: float = (PI * 0.5) * float(i) / float(corner_segments)
+		pts.append(br + Vector2(cos(angle), sin(angle)) * r)
+	# Bottom-left corner (90° → 180°)
+	var bl := rect.position + Vector2(r, rect.size.y - r)
+	for i in range(corner_segments + 1):
+		var angle: float = PI * 0.5 + (PI * 0.5) * float(i) / float(corner_segments)
+		pts.append(bl + Vector2(cos(angle), sin(angle)) * r)
+	# Top-left corner (180° → 270°)
+	var tl := rect.position + Vector2(r, r)
+	for i in range(corner_segments + 1):
+		var angle: float = PI + (PI * 0.5) * float(i) / float(corner_segments)
+		pts.append(tl + Vector2(cos(angle), sin(angle)) * r)
+
 	if filled:
 		ci.draw_colored_polygon(pts, color)
 	elif width > 0:
