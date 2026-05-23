@@ -3,18 +3,18 @@ extends RefCounted
 # Ball color palette — 10 distinct colors for tube sorting
 
 const COLORS = {
-	"red": Color("#E63946"),
-	"blue": Color("#2E86DE"),
-	"green": Color("#2EC04A"),
-	"yellow": Color("#F4C430"),
-	"purple": Color("#9B59E0"),
-	"orange": Color("#FF8C26"),
-	"cyan": Color("#1ABCC9"),
-	"pink": Color("#FF5C8A"),
-	"lime": Color("#A6D820"),
-	"teal": Color("#1FA59E"),
-	"indigo": Color("#5B6BE0"),
-	"brown": Color("#8D5A40"),
+	"red": Color("#C84A50"),
+	"blue": Color("#4080B5"),
+	"green": Color("#4FA868"),
+	"yellow": Color("#D8B440"),
+	"purple": Color("#8A66B0"),
+	"orange": Color("#D88A40"),
+	"cyan": Color("#3E9AA8"),
+	"pink": Color("#C4688E"),
+	"lime": Color("#90B055"),
+	"teal": Color("#3F8E88"),
+	"indigo": Color("#5868A8"),
+	"brown": Color("#856047"),
 }
 
 const COLOR_LIST = [
