@@ -1,6 +1,23 @@
 extends RefCounted
 
-# Claude dark palette — warm dark brown, terracotta accent, refined spacing.
+# Theme variants — each pack gets a different atmosphere.
+const THEME_UNDERWATER := 0
+const THEME_ALCHEMY := 1
+const THEME_SCIFI := 2
+const THEME_FOREST := 3
+
+static func theme_for_pack(pack_idx: int) -> int:
+	# Cycle through the 4 themes across 6 packs
+	var cycle := [THEME_UNDERWATER, THEME_ALCHEMY, THEME_FOREST, THEME_SCIFI, THEME_ALCHEMY, THEME_FOREST]
+	return cycle[pack_idx % cycle.size()]
+
+# Top-level themed background dispatcher.
+static func draw_themed_background(ci: CanvasItem, viewport: Vector2, t: float, theme: int) -> void:
+	match theme:
+		THEME_ALCHEMY: _draw_alchemy_bg(ci, viewport, t)
+		THEME_SCIFI:   _draw_scifi_bg(ci, viewport, t)
+		THEME_FOREST:  _draw_forest_bg(ci, viewport, t)
+		_:             draw_animated_background(ci, viewport, t)  # underwater
 
 # --- Background: underwater (deep teal → abyss) ---
 const BG_TOP := Color("#0F3954")
@@ -188,6 +205,198 @@ static func _draw_god_ray(ci: CanvasItem, viewport: Vector2, x_norm: float, w_no
 			Vector2(x_top - width_bot * scale * 0.5, height),
 		])
 		ci.draw_colored_polygon(pts, col)
+
+# --- Alchemy Lab theme: warm stone wall, wood shelves, glowing potions ---
+static func _draw_alchemy_bg(ci: CanvasItem, viewport: Vector2, t: float) -> void:
+	# Warm stone wall gradient
+	var top := Color("#3a2a20")
+	var mid := Color("#2b1f17")
+	var bot := Color("#1a120c")
+	var bands := 28
+	for i in range(bands):
+		var pos: float = float(i) / float(bands - 1)
+		var col: Color
+		if pos < 0.5:
+			col = top.lerp(mid, pos * 2.0)
+		else:
+			col = mid.lerp(bot, (pos - 0.5) * 2.0)
+		var y: float = viewport.y * float(i) / float(bands)
+		var h: float = viewport.y / float(bands) + 1.0
+		ci.draw_rect(Rect2(Vector2(0, y), Vector2(viewport.x, h)), col)
+
+	# Faint stone block grid texture
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 17
+	for ry in range(8):
+		for rx in range(6):
+			var x: float = float(rx) * (viewport.x / 6.0) + rng.randf_range(-4, 4)
+			var y: float = float(ry) * (viewport.y / 8.0) + rng.randf_range(-3, 3)
+			var w: float = viewport.x / 6.0
+			var h: float = viewport.y / 8.0
+			ci.draw_rect(Rect2(Vector2(x, y), Vector2(w, h)),
+				Color(0, 0, 0, rng.randf_range(0.02, 0.08)), false)
+
+	# Wood shelf silhouettes (3 horizontal bars)
+	for shelf_y in [viewport.y * 0.16, viewport.y * 0.42, viewport.y * 0.68]:
+		var shelf_rect := Rect2(0, shelf_y, viewport.x, 10)
+		ci.draw_rect(shelf_rect, Color("#3a2415"))
+		ci.draw_rect(Rect2(0, shelf_y, viewport.x, 2), Color("#5a3a25"))
+		ci.draw_rect(Rect2(0, shelf_y + 8, viewport.x, 2), Color(0, 0, 0, 0.3))
+
+	# Glowing potion bottle silhouettes on each shelf
+	var bottle_colors := [
+		Color("#a040c0"), Color("#40c060"), Color("#c08040"),
+		Color("#40a0c0"), Color("#c04060"), Color("#80c040"),
+	]
+	for shelf_idx in range(3):
+		var shelf_y2: float = [viewport.y * 0.16, viewport.y * 0.42, viewport.y * 0.68][shelf_idx]
+		for j in range(6):
+			var bx: float = viewport.x * (0.08 + 0.16 * float(j))
+			var by: float = shelf_y2 - 22
+			var col: Color = bottle_colors[(shelf_idx * 6 + j) % bottle_colors.size()]
+			var pulse: float = 0.5 + 0.5 * sin(t * 0.8 + float(shelf_idx * 6 + j) * 0.7)
+			# Bottle silhouette
+			ci.draw_rect(Rect2(bx - 6, by, 12, 18), Color("#1a1208"))
+			ci.draw_rect(Rect2(bx - 3, by - 4, 6, 4), Color("#1a1208"))
+			# Glow inside
+			ci.draw_circle(Vector2(bx, by + 12), 6.5, Color(col.r, col.g, col.b, 0.55 + pulse * 0.25))
+			# Outer glow halo
+			ci.draw_circle(Vector2(bx, by + 12), 14, Color(col.r, col.g, col.b, 0.08 + pulse * 0.06))
+
+	# Candles between bottles — flickering yellow glow
+	for cand_idx in range(4):
+		var cx: float = viewport.x * (0.18 + 0.22 * float(cand_idx))
+		var cy: float = viewport.y * 0.30
+		var flicker: float = 0.7 + 0.3 * sin(t * 5.0 + float(cand_idx) * 1.3)
+		ci.draw_circle(Vector2(cx, cy), 18 * flicker, Color(1.0, 0.75, 0.35, 0.12 * flicker))
+		ci.draw_circle(Vector2(cx, cy), 8 * flicker, Color(1.0, 0.85, 0.50, 0.30 * flicker))
+		ci.draw_circle(Vector2(cx, cy), 3, Color(1.0, 0.95, 0.70, 0.9))
+
+# --- Sci-Fi theme: deep nebula, glowing floor strips, console panels ---
+static func _draw_scifi_bg(ci: CanvasItem, viewport: Vector2, t: float) -> void:
+	# Deep space gradient
+	var top := Color("#0a0a1a")
+	var mid := Color("#16203a")
+	var bot := Color("#040814")
+	var bands := 28
+	for i in range(bands):
+		var pos: float = float(i) / float(bands - 1)
+		var col: Color
+		if pos < 0.5:
+			col = top.lerp(mid, pos * 2.0)
+		else:
+			col = mid.lerp(bot, (pos - 0.5) * 2.0)
+		var y: float = viewport.y * float(i) / float(bands)
+		var h: float = viewport.y / float(bands) + 1.0
+		ci.draw_rect(Rect2(Vector2(0, y), Vector2(viewport.x, h)), col)
+
+	# Nebula clouds (3 large soft circles, slowly drifting)
+	var nebula_a := Vector2(viewport.x * (0.30 + 0.05 * sin(t * 0.05)), viewport.y * 0.18)
+	_draw_soft_glow(ci, nebula_a, viewport.x * 0.55, Color(0.50, 0.30, 0.70, 0.10))
+	var nebula_b := Vector2(viewport.x * (0.70 + 0.05 * cos(t * 0.04)), viewport.y * 0.22)
+	_draw_soft_glow(ci, nebula_b, viewport.x * 0.50, Color(0.30, 0.55, 0.80, 0.09))
+	var nebula_c := Vector2(viewport.x * (0.50 + 0.06 * sin(t * 0.06 + 1.5)), viewport.y * 0.08)
+	_draw_soft_glow(ci, nebula_c, viewport.x * 0.40, Color(0.80, 0.30, 0.50, 0.08))
+
+	# Twinkling star particles
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 23
+	for _i in range(70):
+		var sx: float = rng.randf() * viewport.x
+		var sy: float = rng.randf() * viewport.y * 0.6
+		var sr: float = rng.randf_range(0.5, 1.4)
+		var twinkle: float = 0.5 + 0.5 * sin(t * 1.5 + rng.randf() * TAU)
+		ci.draw_circle(Vector2(sx, sy), sr, Color(1, 1, 1, 0.25 + 0.35 * twinkle))
+
+	# Glowing floor strips (perspective effect — diagonal lines toward bottom)
+	var floor_y: float = viewport.y * 0.78
+	for strip_i in range(5):
+		var x_top: float = viewport.x * (0.15 + 0.175 * float(strip_i))
+		var x_bot: float = viewport.x * (-0.05 + 0.275 * float(strip_i))
+		var pulse: float = 0.6 + 0.4 * sin(t * 1.2 + float(strip_i) * 0.5)
+		ci.draw_line(Vector2(x_top, floor_y), Vector2(x_bot, viewport.y),
+			Color(0.30, 0.85, 1.0, 0.20 + 0.15 * pulse), 2.0)
+		ci.draw_line(Vector2(x_top, floor_y), Vector2(x_bot, viewport.y),
+			Color(0.30, 0.85, 1.0, 0.08), 5.0)  # soft outer glow
+
+	# Top console-screen panels (small dark rects with glowing dots)
+	for panel_i in range(4):
+		var px: float = viewport.x * (0.10 + 0.22 * float(panel_i))
+		var py: float = viewport.y * 0.06
+		ci.draw_rect(Rect2(px, py, 56, 18), Color("#0a1428"))
+		ci.draw_rect(Rect2(px, py, 56, 18), Color("#2a4870"), false)
+		# Screen content — colored dot
+		var dot_color := [Color("#3acfff"), Color("#9affb0"), Color("#ff6a8a"), Color("#ffd066")][panel_i % 4]
+		var dot_pulse: float = 0.5 + 0.5 * sin(t * 2.0 + float(panel_i))
+		ci.draw_circle(Vector2(px + 10 + (panel_i % 3) * 14, py + 9), 2.5,
+			Color(dot_color.r, dot_color.g, dot_color.b, 0.6 + 0.4 * dot_pulse))
+
+# --- Mystical Forest theme: deep green gradient, fireflies, glowing mushrooms ---
+static func _draw_forest_bg(ci: CanvasItem, viewport: Vector2, t: float) -> void:
+	# Deep forest gradient — emerald → black
+	var top := Color("#15302a")
+	var mid := Color("#0c2018")
+	var bot := Color("#040c08")
+	var bands := 28
+	for i in range(bands):
+		var pos: float = float(i) / float(bands - 1)
+		var col: Color
+		if pos < 0.5:
+			col = top.lerp(mid, pos * 2.0)
+		else:
+			col = mid.lerp(bot, (pos - 0.5) * 2.0)
+		var y: float = viewport.y * float(i) / float(bands)
+		var h: float = viewport.y / float(bands) + 1.0
+		ci.draw_rect(Rect2(Vector2(0, y), Vector2(viewport.x, h)), col)
+
+	# Tree silhouettes on edges (darker vertical bands)
+	var tree_col := Color("#050a08")
+	# Left tree
+	ci.draw_rect(Rect2(0, 0, viewport.x * 0.08, viewport.y), tree_col)
+	for tree_y in range(0, int(viewport.y), 60):
+		ci.draw_circle(Vector2(viewport.x * 0.06, float(tree_y) + 30), 22, tree_col)
+	# Right tree
+	ci.draw_rect(Rect2(viewport.x * 0.92, 0, viewport.x * 0.08, viewport.y), tree_col)
+	for tree_y2 in range(0, int(viewport.y), 70):
+		ci.draw_circle(Vector2(viewport.x * 0.94, float(tree_y2) + 35), 22, tree_col)
+
+	# Soft mist bands
+	for mist_i in range(4):
+		var my: float = viewport.y * (0.20 + 0.18 * float(mist_i))
+		var sway: float = sin(t * 0.3 + float(mist_i)) * 20.0
+		ci.draw_rect(Rect2(Vector2(-50 + sway, my), Vector2(viewport.x + 100, 40)),
+			Color(0.5, 0.8, 0.7, 0.04))
+
+	# Fireflies — small glowing dots drifting around
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 31
+	for i in range(22):
+		var base_x: float = rng.randf() * viewport.x
+		var base_y: float = rng.randf() * viewport.y * 0.85
+		var drift_x: float = sin(t * 0.6 + rng.randf() * TAU) * 30.0
+		var drift_y: float = cos(t * 0.4 + rng.randf() * TAU) * 25.0
+		var pulse: float = 0.4 + 0.6 * sin(t * 2.0 + rng.randf() * TAU)
+		var fx: float = base_x + drift_x
+		var fy: float = base_y + drift_y
+		# Cyan/green firefly
+		var hue_sel: int = rng.randi() % 3
+		var col: Color = [Color(0.5, 1.0, 0.7, 1.0), Color(0.3, 0.9, 1.0, 1.0), Color(0.9, 1.0, 0.4, 1.0)][hue_sel]
+		# Outer glow
+		ci.draw_circle(Vector2(fx, fy), 8.0, Color(col.r, col.g, col.b, 0.10 * pulse))
+		ci.draw_circle(Vector2(fx, fy), 4.0, Color(col.r, col.g, col.b, 0.30 * pulse))
+		ci.draw_circle(Vector2(fx, fy), 1.5, Color(col.r, col.g, col.b, 0.95 * pulse))
+
+	# Glowing mushrooms along the bottom — cyan circles
+	for m_idx in range(6):
+		var mx: float = viewport.x * (0.10 + 0.15 * float(m_idx)) + sin(float(m_idx) * 1.7) * 10
+		var my2: float = viewport.y * 0.92 + sin(float(m_idx)) * 5
+		var pulse2: float = 0.6 + 0.4 * sin(t * 1.5 + float(m_idx))
+		ci.draw_circle(Vector2(mx, my2), 14.0, Color(0.4, 1.0, 0.9, 0.10 * pulse2))
+		ci.draw_circle(Vector2(mx, my2), 7.0, Color(0.5, 1.0, 0.95, 0.30 * pulse2))
+		ci.draw_circle(Vector2(mx, my2), 3.0, Color(0.8, 1.0, 1.0, 0.85 * pulse2))
+
+	# Bottom moss/ground
+	ci.draw_rect(Rect2(0, viewport.y - 28, viewport.x, 28), Color("#0a1810"))
 
 # Stubs kept for backward compatibility
 static func draw_stars(_ci: CanvasItem, _viewport: Vector2, _seed_val: int = 7) -> void:
