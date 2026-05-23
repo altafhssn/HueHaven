@@ -266,11 +266,16 @@ func _draw():
 			var glow_rect = tube_rect.grow(3)
 			draw_rounded_rect(glow_rect, Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, 0.5), 14, false, 2.0)
 		
-		# Draw balls in tube (bottom to top)
+		# Draw balls in tube (bottom to top).
+		# When a move is animating, the source tube's top ball is the one
+		# in flight — skip drawing it here to avoid a duplicate.
 		var tube_contents = tubes[i]
 		var n_balls = tube_contents.size()
-		
-		for j in range(n_balls):
+		var draw_count = n_balls
+		if move_animating and i == anim_from:
+			draw_count = n_balls - 1
+
+		for j in range(draw_count):
 			var ball_entry = tube_contents[j]
 			var y_pos = grid_offset.y + tube_height - (j + 1) * (ball_radius * 2 + 2)
 
@@ -281,9 +286,11 @@ func _draw():
 
 			_draw_ball(Vector2(tube_x + tube_width / 2, y_pos + lift_offset), ball_entry)
 		
-		# Empty slots indicator — soft dot
-		for e in range(capacity - n_balls):
-			var slot_y = grid_offset.y + tube_height - (n_balls + e + 1) * (ball_radius * 2 + 2)
+		# Empty slots indicator — soft dot. We use draw_count (not n_balls) so
+		# the source tube during a move doesn't show an extra placeholder where
+		# the in-flight ball originated.
+		for e in range(capacity - draw_count):
+			var slot_y = grid_offset.y + tube_height - (draw_count + e + 1) * (ball_radius * 2 + 2)
 			var center = Vector2(tube_x + tube_width / 2, slot_y)
 			draw_circle(center, ball_radius * 0.4, Color(0.5, 0.45, 0.35, 0.18))
 
