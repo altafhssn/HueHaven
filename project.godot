@@ -11,9 +11,11 @@ config_version=5
 [application]
 
 config/name="HueHaven"
-config/description="A serene puzzle game — sort colored balls into matching tubes."
+config/description="A serene sorting puzzle — calm the chaos one ball at a time."
+config/version="1.0.0"
 run/main_scene="res://scenes/Main.tscn"
 config/features=PackedStringArray("4.6")
+config/icon="res://assets/icon.png"
 
 [autoload]
 
