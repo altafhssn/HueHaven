@@ -2,46 +2,47 @@ extends RefCounted
 
 # Claude dark palette — warm dark brown, terracotta accent, refined spacing.
 
-# --- Background (warm dark, not cold navy) ---
-const BG_TOP := Color("#221C16")
-const BG_BOTTOM := Color("#14100C")
-const BG_SOLID := Color("#1A1612")
+# --- Background: underwater (deep teal → abyss) ---
+const BG_TOP := Color("#0F3954")
+const BG_MID := Color("#0A2A40")
+const BG_BOTTOM := Color("#040E1A")
+const BG_SOLID := Color("#0A2A40")
 
-# --- Panels & cards ---
-const PANEL := Color("#2A231C")
-const PANEL_HI := Color("#332B23")
-const PANEL_BORDER := Color("#3D342B")
-const PANEL_BORDER_HI := Color("#4F4538")
+# --- Panels & cards (dark teal panels) ---
+const PANEL := Color("#0E2A40")
+const PANEL_HI := Color("#143A55")
+const PANEL_BORDER := Color("#1E4866")
+const PANEL_BORDER_HI := Color("#3A6890")
 
-# --- Accent (Claude terracotta) ---
-const ACCENT := Color("#D97757")
-const ACCENT_HI := Color("#E5896B")
-const ACCENT_DIM := Color("#B85F44")
-const ACCENT_GLOW := Color("#D97757", 0.18)
+# --- Accent (warm orange for primary actions — pops on teal) ---
+const ACCENT := Color("#FF8C5A")
+const ACCENT_HI := Color("#FFA070")
+const ACCENT_DIM := Color("#D9683A")
+const ACCENT_GLOW := Color("#FF8C5A", 0.30)
 
-# --- Text (warm cream, not stark white) ---
-const TEXT := Color("#F0EAD5")
-const TEXT_MUTED := Color("#9B9281")
-const TEXT_DIM := Color("#5C5448")
+# --- Text (cool soft white) ---
+const TEXT := Color("#E8F2F8")
+const TEXT_MUTED := Color("#8AA8BE")
+const TEXT_DIM := Color("#4A6478")
 
 # --- Semantic ---
-const STAR := Color("#E8B850")
-const DANGER := Color("#D96A57")
-const SUCCESS := Color("#88B070")
+const STAR := Color("#FFD060")
+const DANGER := Color("#FF6A5A")
+const SUCCESS := Color("#7AD89A")
 
-# --- Tubes ---
-const TUBE_BG := Color("#1F1A14")
-const TUBE_BG_HI := Color("#2B2419")
-const TUBE_BORDER := Color("#3D342B")
-const TUBE_INNER_SHADOW := Color("#000000", 0.30)
+# --- Tubes (glass vials) ---
+const TUBE_BG := Color("#0A2236")
+const TUBE_BG_HI := Color("#143A55")
+const TUBE_BORDER := Color("#3A6890")
+const TUBE_INNER_SHADOW := Color("#000000", 0.40)
 
 # --- Buttons ---
-const BTN_BG := Color("#2A231C")
-const BTN_BG_HOVER := Color("#332B23")
-const BTN_BG_PRESSED := Color("#1A1612")
-const BTN_BORDER := Color("#3D342B")
+const BTN_BG := Color("#0E2A40")
+const BTN_BG_HOVER := Color("#163B55")
+const BTN_BG_PRESSED := Color("#06182A")
+const BTN_BORDER := Color("#2A5070")
 
-static func make_button_style(bg: Color, border: Color, radius := 10) -> StyleBoxFlat:
+static func make_button_style(bg: Color, border: Color, radius := 24) -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = bg
 	sb.border_color = border
@@ -92,62 +93,110 @@ static func make_label(text: String, font_size: int, color: Color, pos: Vector2,
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return lbl
 
-# Static background (used by main menu / settings)
+# Static background — same look as animated, but with t=0.
 static func draw_background(ci: CanvasItem, viewport: Vector2) -> void:
-	ci.draw_rect(Rect2(Vector2.ZERO, viewport), BG_TOP)
-	var bands := 24
-	for i in range(bands):
-		var t: float = float(i) / float(bands - 1)
-		var col: Color = BG_TOP.lerp(BG_BOTTOM, t)
-		var y: float = viewport.y * float(i) / float(bands)
-		var h: float = viewport.y / float(bands) + 1.0
-		ci.draw_rect(Rect2(Vector2(0, y), Vector2(viewport.x, h)), col)
-	# A single soft warm glow at top-left
-	ci.draw_circle(Vector2(viewport.x * 0.2, viewport.y * 0.1), viewport.x * 0.7,
-		Color(ACCENT.r, ACCENT.g, ACCENT.b, 0.04))
+	draw_animated_background(ci, viewport, 0.0)
 
-# Animated background — two slow warm glows that breathe across the screen.
-# Subtle by design: ambient, not decorative.
+# Underwater background: deep teal gradient, god rays from above,
+# drifting bubble particles, ambient floor glow.
 static func draw_animated_background(ci: CanvasItem, viewport: Vector2, t: float) -> void:
-	# Warm dark gradient base
-	ci.draw_rect(Rect2(Vector2.ZERO, viewport), BG_TOP)
-	var bands := 20
+	# --- (1) Three-stop vertical gradient: surface light → mid → abyss ---
+	var bands := 32
 	for i in range(bands):
-		var grad_t: float = float(i) / float(bands - 1)
-		var col: Color = BG_TOP.lerp(BG_BOTTOM, grad_t)
+		var pos: float = float(i) / float(bands - 1)
+		var col: Color
+		if pos < 0.5:
+			col = BG_TOP.lerp(BG_MID, pos * 2.0)
+		else:
+			col = BG_MID.lerp(BG_BOTTOM, (pos - 0.5) * 2.0)
 		var y: float = viewport.y * float(i) / float(bands)
 		var h: float = viewport.y / float(bands) + 1.0
 		ci.draw_rect(Rect2(Vector2(0, y), Vector2(viewport.x, h)), col)
 
-	# Two slow warm glows — terracotta near top, soft amber near bottom.
-	# Lissajous-style drift, gentle.
-	var glow_a_x: float = viewport.x * (0.35 + 0.15 * sin(t * 0.08))
-	var glow_a_y: float = viewport.y * (0.18 + 0.08 * cos(t * 0.05))
-	var glow_a_r: float = viewport.x * 0.85
-	_draw_soft_glow(ci, Vector2(glow_a_x, glow_a_y), glow_a_r,
-		Color(ACCENT.r, ACCENT.g, ACCENT.b, 0.035))
+	# --- (2) God rays: vertical light shafts from above ---
+	# Slight horizontal drift over time
+	var rays := [
+		[0.12, 0.07, 0.10],   # x_top_norm, width_norm, alpha
+		[0.32, 0.09, 0.07],
+		[0.50, 0.08, 0.13],
+		[0.68, 0.10, 0.09],
+		[0.88, 0.08, 0.06],
+	]
+	for ray_data in rays:
+		var x_norm: float = ray_data[0] + sin(t * 0.15 + ray_data[0] * 10.0) * 0.015
+		var w_norm: float = ray_data[1]
+		var alpha: float = ray_data[2]
+		_draw_god_ray(ci, viewport, x_norm, w_norm, alpha)
 
-	var glow_b_x: float = viewport.x * (0.65 + 0.18 * sin(t * 0.06 + 2.1))
-	var glow_b_y: float = viewport.y * (0.78 + 0.10 * cos(t * 0.04 + 2.1))
-	var glow_b_r: float = viewport.x * 0.95
-	_draw_soft_glow(ci, Vector2(glow_b_x, glow_b_y), glow_b_r,
-		Color(0.85, 0.65, 0.45, 0.025))
+	# --- (3) Top surface glow (sunlight from above) ---
+	ci.draw_circle(Vector2(viewport.x * 0.5, -60), viewport.x * 0.95,
+		Color(0.55, 0.78, 0.92, 0.10))
+	ci.draw_circle(Vector2(viewport.x * 0.5, -30), viewport.x * 0.7,
+		Color(0.70, 0.85, 0.95, 0.08))
 
-	# Top edge subtle gradient — feels like ambient light from above
-	for i in range(8):
-		var alpha: float = (1.0 - float(i) / 8.0) * 0.025
-		ci.draw_rect(Rect2(Vector2(0, float(i) * 6), Vector2(viewport.x, 6)),
-			Color(0.95, 0.85, 0.70, alpha))
+	# --- (4) Drifting bubble particles ---
+	# Pseudo-random fixed-spawn positions, animated upward; wrap on top.
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	var bubble_count := 28
+	for i in range(bubble_count):
+		var base_x: float = rng.randf() * viewport.x
+		var seed_y: float = rng.randf() * viewport.y
+		var radius: float = rng.randf_range(1.2, 3.5)
+		var speed: float = rng.randf_range(8.0, 22.0)
+		var drift_amp: float = rng.randf_range(6.0, 18.0)
+		var phase: float = rng.randf() * TAU
+		# Wrap the y position upward
+		var y_pos: float = fposmod(seed_y - t * speed, viewport.y + 40.0) - 20.0
+		var x_pos: float = base_x + sin(t * 0.4 + phase) * drift_amp
+		var alpha: float = 0.18 + 0.12 * sin(t * 0.5 + phase)
+		# Outer halo
+		ci.draw_circle(Vector2(x_pos, y_pos), radius * 1.6, Color(0.7, 0.9, 1.0, alpha * 0.35))
+		# Body
+		ci.draw_circle(Vector2(x_pos, y_pos), radius, Color(0.85, 0.95, 1.0, alpha))
+		# Specular
+		ci.draw_circle(Vector2(x_pos - radius * 0.3, y_pos - radius * 0.3), radius * 0.35,
+			Color(1, 1, 1, alpha * 0.9))
+
+	# --- (5) Bottom abyss vignette ---
+	for i in range(6):
+		var alpha2: float = float(i) / 6.0 * 0.18
+		var h: float = 24.0
+		ci.draw_rect(Rect2(Vector2(0, viewport.y - float(i + 1) * h), Vector2(viewport.x, h)),
+			Color(0, 0, 0, alpha2))
+
+static func _draw_god_ray(ci: CanvasItem, viewport: Vector2, x_norm: float, w_norm: float, alpha: float) -> void:
+	# Trapezoid widening downward, with soft falloff via layered polygons.
+	var x_top: float = viewport.x * x_norm
+	var width_top: float = viewport.x * w_norm
+	var width_bot: float = viewport.x * w_norm * 2.4
+	var height: float = viewport.y * 0.75
+	# Center the bottom trapezoid below the top
+	var x_top_a: float = x_top - width_top * 0.5
+	var x_top_b: float = x_top + width_top * 0.5
+	var x_bot_a: float = x_top - width_bot * 0.5
+	var x_bot_b: float = x_top + width_bot * 0.5
+	# 3 stacked polygons for soft edges
+	for k in range(3):
+		var scale: float = 1.0 + float(k) * 0.5
+		var a: float = alpha / (float(k) + 1.0)
+		var col := Color(0.85, 0.95, 1.0, a)
+		var pts := PackedVector2Array([
+			Vector2(x_top - width_top * scale * 0.5, 0),
+			Vector2(x_top + width_top * scale * 0.5, 0),
+			Vector2(x_top + width_bot * scale * 0.5, height),
+			Vector2(x_top - width_bot * scale * 0.5, height),
+		])
+		ci.draw_colored_polygon(pts, col)
+
+# Stubs kept for backward compatibility
+static func draw_stars(_ci: CanvasItem, _viewport: Vector2, _seed_val: int = 7) -> void:
+	pass
 
 static func _draw_soft_glow(ci: CanvasItem, center: Vector2, radius: float, color: Color) -> void:
-	# Three stacked translucent circles approximate a soft radial falloff
 	ci.draw_circle(center, radius, Color(color.r, color.g, color.b, color.a))
 	ci.draw_circle(center, radius * 0.65, Color(color.r, color.g, color.b, color.a * 1.4))
 	ci.draw_circle(center, radius * 0.35, Color(color.r, color.g, color.b, color.a * 2.0))
-
-# Legacy stub kept for callers — replaced by ambient draw_animated_background.
-static func draw_stars(ci: CanvasItem, viewport: Vector2, seed_val: int = 7) -> void:
-	pass
 
 # Rounded rect filled with a vertical gradient (top → bottom).
 static func draw_gradient_rect(ci: CanvasItem, rect: Rect2, top: Color, bottom: Color, _radius: float = 8.0) -> void:
