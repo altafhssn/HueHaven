@@ -14,3 +14,4 @@ android/
 # Keystores — must never be committed
 *.keystore
 *.jks
+.keystore.env
