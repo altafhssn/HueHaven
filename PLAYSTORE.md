@@ -67,31 +67,49 @@ keytool -genkey -v -keystore huehaven-release.keystore \
 - Back it up to encrypted cloud storage and a USB drive
 - Record the password in a password manager
 
-### 2.3. Wire it into Godot
-Open `export_presets.cfg` (in the project root) and set:
-```ini
-keystore/release="C:\\Users\\<you>\\keystores\\huehaven-release.keystore"
-keystore/release_user="huehaven"
-keystore/release_password="<your password>"
+### 2.3. Wire it into Godot (safe-for-public-repo pattern)
+Don't put the password directly in `export_presets.cfg` — that file is
+committed. Instead, create a gitignored env file:
+
+`.keystore.env` (project root, already gitignored):
+```bash
+KEYSTORE_PATH="C:/Users/<you>/keystores/huehaven-release.keystore"
+KEYSTORE_USER="huehaven"
+KEYSTORE_PASS="<your password>"
 ```
-**Don't commit this file with passwords filled in** — either add it to
-`.gitignore` after the first commit or use environment-variable substitution.
+
+`build_release.sh` (shipped) reads this, splices it into the preset just
+for the export, and reverts so the secret never lands in git.
 
 ---
 
 ## 3. Build the AAB
 
-### 3.1. From Godot editor
+### 3.1. One-line build (preferred)
+```bash
+./build_release.sh
+```
+That's it. The script:
+- Reads `.keystore.env`
+- Splices the keystore + password into `export_presets.cfg`
+- Runs `godot --headless --export-release`
+- Verifies the AAB is signed with `jarsigner -verify`
+- Restores the preset (secret reverted) even if the build fails
+
+Output: `build/android/huehaven-v<version>.aab`.
+
+### 3.2. From the Godot editor (alternative)
 - **Project → Export...**
 - Select **Android (Closed Beta)** preset
+- Paste the keystore path + password into the preset fields (don't save)
 - Click **Export Project** at the bottom
-- Choose output path: `build/huehaven-v1.0.0.aab`
+- Choose output path: `build/android/huehaven-v1.0.0.aab`
 - Wait for Gradle to compile (~2-5 minutes first time)
 
-### 3.2. Verify the AAB
-The output should be at the path you chose. Quick sanity checks:
-- File size should be roughly 15-30 MB (HueHaven is small)
-- Filename ends in `.aab`, not `.apk` (AAB is required by Play Store since 2021)
+### 3.3. Verify the AAB
+- File size should be roughly 40-60 MB (Godot Android runtime is bulky)
+- `jar verified.` from `jarsigner -verify <file>` confirms it's signed
+- Filename ends in `.aab`, not `.apk`
 
 ---
 
