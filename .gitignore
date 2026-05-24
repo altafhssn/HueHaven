@@ -3,3 +3,14 @@
 *.translation
 *.mo
 export/
+.claude/worktrees/
+
+# Build artifacts
+build/
+android/
+*.aab
+*.apk
+
+# Keystores — must never be committed
+*.keystore
+*.jks
