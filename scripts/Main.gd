@@ -10,6 +10,7 @@ var LevelGeneratorScript = preload("res://scripts/LevelGenerator.gd")
 var ProgressionScript = preload("res://scripts/Progression.gd")
 var LevelSelectScript = preload("res://scripts/LevelSelect.gd")
 const StyleScript = preload("res://scripts/Style.gd")
+const AssetsScript = preload("res://scripts/Assets.gd")
 
 var game_state = null
 var tube_grid = null
@@ -63,6 +64,10 @@ const TRANSITION_FADE_OUT: float = 0.20
 
 func _ready():
 	viewport_size = get_viewport().get_visible_rect().size
+
+	# Preload all boba theme textures (~3-5 MB total) so first level
+	# render is sprite-ready with zero load hitch.
+	AssetsScript.preload_all()
 
 	# Init progression
 	progression = ProgressionScript.new()
@@ -279,10 +284,14 @@ func _draw():
 	var n_tubes = tubes.size()
 	var capacity = level_data.capacity
 	
-	# Atmospheric background — theme by current pack
-	var t_sec: float = Time.get_ticks_msec() / 1000.0
-	var theme: int = _current_theme()
-	StyleScript.draw_themed_background(self, viewport_size, t_sec, theme)
+	# Cafe background — single full-screen blit covers the viewport
+	var bg_tex: Texture2D = AssetsScript.cafe_bg()
+	if bg_tex:
+		draw_texture_rect(bg_tex, Rect2(Vector2.ZERO, viewport_size), false)
+	else:
+		# Fallback to procedural bg if assets aren't loaded
+		var t_sec: float = Time.get_ticks_msec() / 1000.0
+		StyleScript.draw_themed_background(self, viewport_size, t_sec, _current_theme())
 
 	# Draw each tube
 	for i in range(n_tubes):
@@ -301,24 +310,26 @@ func _draw():
 				var a := 0.20 / float(k + 1)
 				draw_rounded_rect(grow, Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, a), 18 + k * 4, true)
 
-		# Glass vial body — translucent so the underwater background shows through
-		var glass_top := Color(0.55, 0.78, 0.92, 0.18)
-		var glass_bot := Color(0.30, 0.50, 0.70, 0.10)
-		StyleScript.draw_gradient_rect(self, tube_rect, glass_top, glass_bot, 18.0)
+		# Glass vial sprite (replaces procedural draw)
+		var glass_tex: Texture2D = AssetsScript.glass()
+		if glass_tex:
+			draw_texture_rect(glass_tex, tube_rect, false)
+		else:
+			# Fallback procedural look
+			var glass_top := Color(0.55, 0.78, 0.92, 0.18)
+			var glass_bot := Color(0.30, 0.50, 0.70, 0.10)
+			StyleScript.draw_gradient_rect(self, tube_rect, glass_top, glass_bot, 18.0)
+			draw_rounded_rect(tube_rect, Color(0.50, 0.72, 0.88, 0.55), 18, false, 1.5)
 
-		# Inner left highlight (vertical, like light reflecting off glass)
-		draw_rect(Rect2(tube_rect.position + Vector2(4, 22), Vector2(2, tube_rect.size.y - 44)),
-			Color(1, 1, 1, 0.22))
-
-		# Inner right shadow (subtle)
-		draw_rect(Rect2(tube_rect.position + Vector2(tube_rect.size.x - 6, 22), Vector2(2, tube_rect.size.y - 44)),
-			Color(0, 0, 0, 0.18))
-
-		# Outline — soft cyan-tinted border
-		var border_col := Color(0.50, 0.72, 0.88, 0.55)
-		if selected_tube == i:
-			border_col = StyleScript.ACCENT
-		draw_rounded_rect(tube_rect, border_col, 18, false, 1.5)
+		# Paper straw sticking out the top of the glass (per-pack color)
+		var straw_tex: Texture2D = AssetsScript.straw_for_pack(_current_pack_index())
+		if straw_tex:
+			var sw: float = tube_width * 0.22
+			var sh: float = tube_height * 0.55
+			# Anchor at top-right of glass with a slight tilt
+			var sx: float = tube_rect.position.x + tube_rect.size.x * 0.55
+			var sy: float = tube_rect.position.y - sh * 0.55
+			draw_texture_rect(straw_tex, Rect2(sx, sy, sw, sh), false)
 		
 		# Draw balls in tube (bottom to top).
 		# When a move is animating, the source tube's top ball is the one
@@ -431,10 +442,34 @@ func _draw_ball(center: Vector2, ball_entry):
 	var stype: String = GameStateScript.get_special_type(ball_entry)
 	var color_idx: int = GameStateScript.get_ball_color(ball_entry)
 
-	# Base body color
+	# Pick the right texture: special pearls override color-indexed pearls
+	var tex: Texture2D = null
+	if stype != "":
+		tex = AssetsScript.special(stype)
+	if tex == null and color_idx >= 0:
+		tex = AssetsScript.pearl(color_idx)
+
+	# Fallback to procedural draw if no texture (asset missing)
+	if tex == null:
+		_draw_ball_procedural(center, ball_entry)
+		return
+
+	# Sprite-based pearl: square the radius into a rect and blit
+	var d: float = ball_radius * 2.2  # slight overscale so glassy edge isn't cropped tight
+	var rect := Rect2(center.x - d * 0.5, center.y - d * 0.5, d, d)
+	draw_texture_rect(tex, rect, false)
+
+	# Color-blind shape marker still applies — drawn over the pearl
+	if colorblind and color_idx >= 0 and stype != "rainbow":
+		_draw_colorblind_marker(center, color_idx)
+
+# Procedural fallback if textures haven't loaded — preserves the previous
+# multi-layer glass-bubble render so the game still renders without art.
+func _draw_ball_procedural(center: Vector2, ball_entry):
+	var stype: String = GameStateScript.get_special_type(ball_entry)
+	var color_idx: int = GameStateScript.get_ball_color(ball_entry)
 	var color: Color
 	if stype == "rainbow":
-		# Animated rainbow gradient
 		var hue = fmod(Time.get_ticks_msec() * 0.0005, 1.0)
 		color = Color.from_hsv(hue, 0.7, 0.95)
 	elif stype == "stone":
@@ -443,56 +478,17 @@ func _draw_ball(center: Vector2, ball_entry):
 		color = BallColorsScript.get_color(color_idx)
 	else:
 		color = Color("#888888")
-
 	if color == Color.TRANSPARENT:
 		return
-
-	# Glass bubble draw — translucent body that lets the background tint through,
-	# with a large soft highlight and a subtle bottom reflection.
-
-	# (1) Very soft cast shadow
 	draw_circle(center + Vector2(1.0, ball_radius * 0.22), ball_radius * 1.0, Color(0, 0, 0, 0.22))
-
-	# (2) Outer color ring — darker tinted edge for definition
-	var edge_col := color.darkened(0.45)
-	edge_col.a = 0.85
-	draw_circle(center, ball_radius + 0.5, edge_col)
-
-	# (3) Translucent body — main color at moderate opacity
-	var body_col := color
-	body_col.a = 0.78
+	draw_circle(center, ball_radius + 0.5, color.darkened(0.45))
+	var body_col := color; body_col.a = 0.78
 	draw_circle(center, ball_radius - 0.5, body_col)
-
-	# (4) Inner color core — slightly more saturated center
-	var core_col := color.lightened(0.10)
-	core_col.a = 0.55
-	draw_circle(center + Vector2(0, ball_radius * 0.05), ball_radius * 0.80, core_col)
-
-	# (5) Bottom rim reflection — subtle white crescent (refracted light)
-	var refl_col := Color(1, 1, 1, 0.18)
-	draw_circle(center + Vector2(0, ball_radius * 0.45), ball_radius * 0.55, refl_col)
-	draw_circle(center + Vector2(0, ball_radius * 0.50), ball_radius * 0.40, Color(1, 1, 1, 0.10))
-
-	# (6) Big soft top-left highlight — the main glassy reflection
-	var hl_center := center + Vector2(-ball_radius * 0.28, -ball_radius * 0.38)
-	draw_circle(hl_center, ball_radius * 0.60, Color(1, 1, 1, 0.10))
-	draw_circle(hl_center, ball_radius * 0.48, Color(1, 1, 1, 0.20))
-	draw_circle(hl_center, ball_radius * 0.36, Color(1, 1, 1, 0.36))
-	draw_circle(hl_center, ball_radius * 0.22, Color(1, 1, 1, 0.62))
-	draw_circle(hl_center, ball_radius * 0.12, Color(1, 1, 1, 0.85))
-
-	# (7) Tiny bright specular pinpoint
-	draw_circle(hl_center + Vector2(-ball_radius * 0.06, -ball_radius * 0.06),
-		ball_radius * 0.06, Color(1, 1, 1, 1.0))
-
-	# (8) Inner rim highlight on bottom-right (light wrapping around)
-	draw_arc(center, ball_radius - 1, PI * 0.15, PI * 0.6, 12, Color(1, 1, 1, 0.30), 1.5, true)
-
-	# Color-blind shape marker
+	var hl := center + Vector2(-ball_radius * 0.28, -ball_radius * 0.38)
+	draw_circle(hl, ball_radius * 0.48, Color(1, 1, 1, 0.20))
+	draw_circle(hl, ball_radius * 0.22, Color(1, 1, 1, 0.62))
 	if colorblind and color_idx >= 0 and stype != "rainbow":
 		_draw_colorblind_marker(center, color_idx)
-
-	# Special overlay
 	if stype != "":
 		_draw_special_overlay(center, ball_entry)
 

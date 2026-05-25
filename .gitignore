@@ -8,3 +8,4 @@ export/
 
 # Raw Gemini source sheets — kept local only, outputs in assets/art/
 assets/art/raw/
+.keystore.env
