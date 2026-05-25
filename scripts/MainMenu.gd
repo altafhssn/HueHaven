@@ -155,81 +155,34 @@ func _draw():
 	draw_string(font, Vector2(viewport.x * 0.5 - st_size.x * 0.5, viewport.y * 0.48),
 		subtitle, HORIZONTAL_ALIGNMENT_LEFT, -1, sub_size, StyleScript.TEXT_MUTED)
 
-# Logo mark — apothecary test tube with four stacked glass balls inside,
-# warm rim glow inside a dark rounded squircle. Game-referenced.
+# Logo mark — loads assets/icon.png so the menu logo always matches the
+# Play Store app icon. Single source of truth: scripts/generate_icon.py.
+var _logo_tex: Texture2D = null
+
 func _draw_logo(viewport: Vector2):
 	var cx: float = viewport.x * 0.5
 	var cy: float = viewport.y * 0.22
-	var icon_size: float = 170.0
-	var icon_r: float = icon_size * 0.22  # iOS squircle-ish corner
-
-	# ----- (1) Drop shadow + icon container -----
-	for k in range(4):
+	var icon_size: float = 180.0
+	# Lazy-load the icon so MainMenu doesn't need to know about Assets singleton
+	if _logo_tex == null:
+		_logo_tex = load("res://assets/icon.png")
+	if _logo_tex == null:
+		# Fallback rounded rect with brand color if icon missing
+		var fallback_rect := Rect2(cx - icon_size * 0.5, cy - icon_size * 0.5, icon_size, icon_size)
+		StyleScript.draw_rounded_rect(self, fallback_rect, StyleScript.ACCENT, icon_size * 0.22, true)
+		return
+	# Soft drop shadow under the icon (warm dark)
+	for k in range(3):
+		var sh_offset := Vector2(0, float(k + 1) * 2.0)
 		var sh_rect := Rect2(
-			cx - icon_size * 0.5 - float(k),
-			cy - icon_size * 0.5 + float(k) * 2.0,
-			icon_size + float(k) * 2.0,
-			icon_size + float(k) * 2.0)
-		StyleScript.draw_rounded_rect(self, sh_rect, Color(0, 0, 0, 0.10), icon_r + float(k), true)
+			cx - icon_size * 0.5 + sh_offset.x,
+			cy - icon_size * 0.5 + sh_offset.y,
+			icon_size, icon_size)
+		StyleScript.draw_rounded_rect(self, sh_rect,
+			Color(0.20, 0.13, 0.08, 0.10), icon_size * 0.22, true)
+	# Blit the icon
 	var icon_rect := Rect2(cx - icon_size * 0.5, cy - icon_size * 0.5, icon_size, icon_size)
-	StyleScript.draw_rounded_rect(self, icon_rect, Color("#1A2238"), icon_r, true)
-	StyleScript.draw_gradient_rect(self, icon_rect, Color("#22304A"), Color("#0E1828"), icon_r)
-
-	# ----- (2) Cool cyan rim glow (contained) -----
-	var glow_tint := Color(0.45, 0.78, 0.95)  # soft cyan
-	var top_glow := Rect2(icon_rect.position.x, icon_rect.position.y, icon_size, icon_size * 0.50)
-	StyleScript.draw_gradient_rect(self, top_glow,
-		Color(glow_tint.r, glow_tint.g, glow_tint.b, 0.16),
-		Color(glow_tint.r, glow_tint.g, glow_tint.b, 0.0),
-		icon_r)
-	var bot_glow := Rect2(icon_rect.position.x, cy + icon_size * 0.05, icon_size, icon_size * 0.45)
-	StyleScript.draw_gradient_rect(self, bot_glow,
-		Color(glow_tint.r, glow_tint.g, glow_tint.b, 0.0),
-		Color(glow_tint.r, glow_tint.g, glow_tint.b, 0.12),
-		icon_r)
-
-	# ----- (3) Test tube — capsule-shaped glass vial centered in the icon -----
-	var tube_w: float = icon_size * 0.38
-	var tube_h: float = icon_size * 0.80
-	var tube_x: float = cx - tube_w * 0.5
-	var tube_y: float = cy - tube_h * 0.5
-	var tube_rect := Rect2(tube_x, tube_y, tube_w, tube_h)
-	var tube_corner_r: float = tube_w * 0.50   # full-radius => capsule shape
-
-	# Tube backdrop tint (slight cool wash so the glass reads)
-	StyleScript.draw_rounded_rect(self, tube_rect, Color(0.55, 0.78, 0.95, 0.06), tube_corner_r, true)
-	# Tube body gradient (translucent, brighter at top)
-	StyleScript.draw_gradient_rect(self, tube_rect,
-		Color(0.65, 0.85, 0.98, 0.14),
-		Color(0.35, 0.55, 0.75, 0.08),
-		tube_corner_r)
-	# Tube outer rim — thin cool cyan border
-	StyleScript.draw_rounded_rect(self, tube_rect,
-		Color(0.55, 0.80, 0.95, 0.55),
-		tube_corner_r, false, 1.6)
-	# Left edge vertical highlight (light catching the glass)
-	draw_rect(Rect2(tube_x + 3, tube_y + tube_corner_r * 0.5, 2, tube_h - tube_corner_r), Color(1, 1, 1, 0.22))
-
-	# ----- (4) Three stacked color balls inside the tube -----
-	# Sized + spaced so they sit comfortably without touching the tube ends.
-	var ball_r: float = tube_w * 0.32
-	var inner_pad: float = ball_r * 0.4 + 2.0
-	var top_y: float = tube_y + inner_pad + ball_r
-	var bot_y: float = tube_y + tube_h - inner_pad - ball_r
-	var step_y: float = (bot_y - top_y) / 2.0
-	var ball_colors := [
-		Color("#9E7CB8"),  # soft lavender (top)
-		Color("#5DA8C4"),  # cool teal (middle)
-		Color("#7DBE82"),  # sage green (bottom)
-	]
-	for i in range(ball_colors.size()):
-		var by: float = top_y + float(i) * step_y
-		_draw_logo_ball(Vector2(cx, by), ball_r, ball_colors[i])
-
-	# ----- (5) Subtle cool border around the whole icon -----
-	StyleScript.draw_rounded_rect(self, icon_rect,
-		Color(0.55, 0.80, 0.95, 0.22),
-		icon_r, false, 1.5)
+	draw_texture_rect(_logo_tex, icon_rect, false)
 
 func _draw_logo_ball(center: Vector2, r: float, color: Color) -> void:
 	# Translucent body — colors mix visually where they overlap

@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
-"""Generate HueHaven app icon — replicates the in-game logo procedurally.
-Produces three files:
-  assets/icon.png                  512x512 main icon (Play Store + Godot config)
+"""Generate HueHaven app icon — cafe boba theme.
+
+Produces:
+  assets/icon.png                  512x512 main icon (Play Store + Godot)
   assets/icon_foreground.png       432x432 adaptive icon foreground (Android)
   assets/icon_background.png       432x432 solid background (Android adaptive)
+
+Design: warm cream squircle with a tall slender boba glass in the center,
+stacked with taro/peach/matcha/milktea pearls and a mint paper straw
+poking out the top. Walnut wood border for the icon edge.
 """
 import os
 from PIL import Image, ImageDraw, ImageFilter
@@ -12,28 +17,28 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ASSETS = os.path.join(ROOT, "assets")
 os.makedirs(ASSETS, exist_ok=True)
 
-# Palette (matches Style.gd)
-BG_TOP = (34, 48, 74)         # #22304A
-BG_BOT = (14, 24, 40)          # #0E1828
-ACCENT = (255, 140, 90, 255)   # #FF8C5A
-ACCENT_GLOW = (255, 140, 90)
-LAVENDER = (158, 124, 184)     # #9E7CB8
-TEAL = (122, 184, 196)         # #7AB8C4
-SAGE = (125, 190, 130)         # #7DBE82
-CYAN_RIM = (140, 200, 240)
+# Cafe boba palette
+BG_TOP = (245, 235, 218)
+BG_BOT = (220, 200, 175)
+ACCENT = (232, 155, 122)
+WALNUT = (138, 110, 79)
+ESPRESSO = (61, 42, 26)
+RIM_CREAM = (245, 224, 178)
+
+TARO = (158, 124, 184)
+MATCHA = (125, 190, 130)
+MILKTEA = (184, 142, 92)
+PEACH = (232, 160, 133)
+STRAW_MINT = (170, 210, 185)
 
 
-def render_icon(size: int, with_squircle: bool = True) -> Image.Image:
-    """Render the logo at `size` x `size`. If with_squircle is False, draws
-    just the foreground (transparent background) — for adaptive icons."""
+def render_icon(size, with_squircle=True):
     img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     d = ImageDraw.Draw(img, "RGBA")
 
     if with_squircle:
-        # Vertical gradient background inside a rounded square
         radius = int(size * 0.22)
-        # Draw gradient
-        grad = Image.new("RGBA", (size, size), (0, 0, 0, 255))
+        grad = Image.new("RGBA", (size, size), BG_BOT + (255,))
         gd = ImageDraw.Draw(grad)
         for y in range(size):
             t = y / size
@@ -41,7 +46,6 @@ def render_icon(size: int, with_squircle: bool = True) -> Image.Image:
             g = int(BG_TOP[1] + (BG_BOT[1] - BG_TOP[1]) * t)
             b = int(BG_TOP[2] + (BG_BOT[2] - BG_TOP[2]) * t)
             gd.line([(0, y), (size, y)], fill=(r, g, b, 255))
-        # Mask to squircle
         mask = Image.new("L", (size, size), 0)
         ImageDraw.Draw(mask).rounded_rectangle(
             (0, 0, size - 1, size - 1), radius=radius, fill=255
@@ -51,144 +55,176 @@ def render_icon(size: int, with_squircle: bool = True) -> Image.Image:
         img = Image.alpha_composite(img, bg)
         d = ImageDraw.Draw(img, "RGBA")
 
-        # Cool cyan rim glow (top + bottom) — radial gradients masked by squircle
+        # Soft warm peach glow at top
         glow = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-        gld = ImageDraw.Draw(glow, "RGBA")
-        # Top glow strip
-        for y in range(int(size * 0.5)):
-            alpha = int((1 - y / (size * 0.5)) * 40)
-            gld.line([(0, y), (size, y)], fill=(*CYAN_RIM, alpha))
-        # Bottom glow strip
-        for y in range(int(size * 0.5)):
-            yy = size - 1 - y
-            alpha = int((1 - y / (size * 0.5)) * 32)
-            gld.line([(0, yy), (size, yy)], fill=(*CYAN_RIM, alpha))
-        # Mask glow to squircle
+        gd2 = ImageDraw.Draw(glow)
+        for r_glow in range(int(size * 0.42), 0, -8):
+            alpha = int(28 * (1 - r_glow / (size * 0.42)))
+            gd2.ellipse((size * 0.5 - r_glow, size * 0.12 - r_glow,
+                         size * 0.5 + r_glow, size * 0.12 + r_glow),
+                        fill=ACCENT + (alpha,))
         glow_masked = Image.new("RGBA", (size, size), (0, 0, 0, 0))
         glow_masked.paste(glow, (0, 0), mask)
         img = Image.alpha_composite(img, glow_masked)
         d = ImageDraw.Draw(img, "RGBA")
 
-    # ----- The test-tube + balls (drawn directly, no squircle mask) -----
     cx = size / 2
     cy = size / 2
 
-    # Tube — capsule shape (vertical)
-    tube_w = size * 0.38
-    tube_h = size * 0.80
-    tube_x = cx - tube_w / 2
-    tube_y = cy - tube_h / 2
+    # Glass cup proportions — slightly wider, slightly taller
+    glass_w = size * 0.42
+    glass_h = size * 0.74
+    glass_x = cx - glass_w / 2
+    glass_y = cy - glass_h / 2 + size * 0.04
 
-    # Tube backdrop (translucent cool wash)
-    tube_radius = tube_w / 2  # fully rounded → capsule
-    capsule = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    cd = ImageDraw.Draw(capsule, "RGBA")
-    # Stack 3 layered fills for gradient feel
-    cd.rounded_rectangle(
-        (tube_x, tube_y, tube_x + tube_w, tube_y + tube_h),
-        radius=tube_radius, fill=(140, 200, 240, 16)
-    )
-    # Gradient via thin horizontal lines clipped by capsule mask
-    cap_mask = Image.new("L", (size, size), 0)
-    ImageDraw.Draw(cap_mask).rounded_rectangle(
-        (tube_x, tube_y, tube_x + tube_w, tube_y + tube_h),
-        radius=tube_radius, fill=255
-    )
-    glass = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    gd2 = ImageDraw.Draw(glass)
-    for y in range(int(tube_y), int(tube_y + tube_h)):
-        t = (y - tube_y) / tube_h
-        r = int(166 + (89 - 166) * t)
-        g = int(217 + (140 - 217) * t)
-        b = int(250 + (191 - 250) * t)
-        a = int(42 + (28 - 42) * t)
-        gd2.line([(0, y), (size, y)], fill=(r, g, b, a))
-    glass_clipped = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    glass_clipped.paste(glass, (0, 0), cap_mask)
-    img = Image.alpha_composite(img, glass_clipped)
-    d = ImageDraw.Draw(img, "RGBA")
-    # Tube outer rim
+    # --- LAYER ORDER (back to front): straw → glass body → pearls → glass rim ---
+
+    # 1. Paper straw — drawn FIRST so pearls will cover its lower half
+    straw_w = max(10, int(size * 0.07))
+    straw_h = int(size * 0.62)
+    straw_x = cx + size * 0.04   # offset slightly to the right
+    straw_y = glass_y - straw_h * 0.45
+    _draw_paper_straw(img, straw_x, straw_y, straw_w, straw_h, STRAW_MINT)
+
+    # 2. Glass body fill — translucent warm cream, covers lower half of straw
     d.rounded_rectangle(
-        (tube_x, tube_y, tube_x + tube_w, tube_y + tube_h),
-        radius=tube_radius, outline=(140, 205, 242, 150), width=max(2, int(size / 200))
+        (glass_x, glass_y, glass_x + glass_w, glass_y + glass_h),
+        radius=int(size * 0.05),
+        fill=(248, 235, 215, 180)
     )
-    # Left vertical highlight on the tube
-    hl_y0 = tube_y + tube_radius * 0.5
-    hl_y1 = tube_y + tube_h - tube_radius * 0.5
+    # Left wall highlight (drawn before pearls so they cover it)
     d.rectangle(
-        (tube_x + size * 0.012, hl_y0, tube_x + size * 0.012 + max(2, size / 200), hl_y1),
-        fill=(255, 255, 255, 60)
+        (glass_x + 4, glass_y + 8, glass_x + 9, glass_y + glass_h - 20),
+        fill=(255, 255, 255, 200)
+    )
+    # Right wall shadow
+    d.rectangle(
+        (glass_x + glass_w - 9, glass_y + 8, glass_x + glass_w - 4, glass_y + glass_h - 20),
+        fill=ESPRESSO + (160,)
+    )
+    # Base shadow
+    d.rectangle(
+        (glass_x + 5, glass_y + glass_h - 16, glass_x + glass_w - 5, glass_y + glass_h - 5),
+        fill=ESPRESSO + (210,)
     )
 
-    # Three balls — top to bottom: lavender / teal / sage
-    ball_r = tube_w * 0.32
-    inner_pad = ball_r * 0.4 + size * 0.012
-    top_y = tube_y + inner_pad + ball_r
-    bot_y = tube_y + tube_h - inner_pad - ball_r
-    step = (bot_y - top_y) / 2
-    ball_colors = [LAVENDER, TEAL, SAGE]
-    for i, col in enumerate(ball_colors):
-        by = top_y + step * i
+    # 3. THREE stacked boba pearls — sized to comfortably fit
+    ball_r = glass_w * 0.30
+    pearls = [TARO, PEACH, MATCHA]  # bottom -> top
+    inner_pad = ball_r * 0.4 + 6
+    bottom_y = glass_y + glass_h - inner_pad - ball_r
+    top_y = glass_y + inner_pad + ball_r
+    if len(pearls) > 1:
+        step = (bottom_y - top_y) / (len(pearls) - 1)
+    else:
+        step = 0
+    for i, col in enumerate(pearls):
+        by = bottom_y - i * step
         _draw_glass_ball(img, cx, by, ball_r, col)
 
+    # 4. Cream rim drawn LAST so it sits in front of pearls visually
+    rim_h = max(4, int(size * 0.026))
+    d = ImageDraw.Draw(img, "RGBA")
+    d.rectangle(
+        (glass_x + 3, glass_y, glass_x + glass_w - 3, glass_y + rim_h),
+        fill=RIM_CREAM + (255,)
+    )
+    d.rectangle(
+        (glass_x + 3, glass_y + rim_h, glass_x + glass_w - 3, glass_y + rim_h + 3),
+        fill=ESPRESSO + (170,)
+    )
+
+    # 5. Walnut border on the glass
+    d.rounded_rectangle(
+        (glass_x, glass_y, glass_x + glass_w, glass_y + glass_h),
+        radius=int(size * 0.05),
+        outline=WALNUT, width=max(2, int(size / 160))
+    )
+
     if with_squircle:
-        # Subtle accent border around the squircle
+        # Walnut outer border on the icon
         radius = int(size * 0.22)
         d_outer = ImageDraw.Draw(img, "RGBA")
         d_outer.rounded_rectangle(
             (0, 0, size - 1, size - 1), radius=radius,
-            outline=(*CYAN_RIM, 60), width=max(2, int(size / 160))
+            outline=WALNUT + (200,), width=max(3, int(size / 130))
         )
 
     return img
 
 
-def _draw_glass_ball(img: Image.Image, cx, cy, r, color):
-    """Layered glassy ball — matches the in-game multi-layer render."""
+def _draw_glass_ball(img, cx, cy, r, color):
     d = ImageDraw.Draw(img, "RGBA")
-    # Soft cast shadow (slightly down + offset, blurred via larger semi-transparent ellipse)
     shadow = Image.new("RGBA", img.size, (0, 0, 0, 0))
     ImageDraw.Draw(shadow).ellipse(
         (cx - r * 1.05, cy + r * 0.18 - r * 1.05, cx + r * 1.05, cy + r * 0.18 + r * 1.05),
-        fill=(0, 0, 0, 55)
+        fill=(0, 0, 0, 70)
     )
-    shadow = shadow.filter(ImageFilter.GaussianBlur(radius=max(1, r * 0.08)))
+    shadow = shadow.filter(ImageFilter.GaussianBlur(radius=max(1, r * 0.10)))
     img.alpha_composite(shadow)
     d = ImageDraw.Draw(img, "RGBA")
-    # Edge ring (darker shade)
     er, eg, eb = [int(c * 0.55) for c in color]
-    d.ellipse((cx - r - 1, cy - r - 1, cx + r + 1, cy + r + 1), fill=(er, eg, eb, 215))
-    # Body
-    d.ellipse((cx - r, cy - r, cx + r, cy + r), fill=(*color, 200))
-    # Brighter core
+    d.ellipse((cx - r - 1, cy - r - 1, cx + r + 1, cy + r + 1), fill=(er, eg, eb, 225))
+    d.ellipse((cx - r, cy - r, cx + r, cy + r), fill=(*color, 215))
     cr, cg, cb = [min(255, int(c * 1.15)) for c in color]
-    d.ellipse((cx - r * 0.78, cy - r * 0.72, cx + r * 0.78, cy + r * 0.84), fill=(cr, cg, cb, 140))
-    # Bottom rim reflection
-    d.ellipse((cx - r * 0.5, cy + r * 0.18, cx + r * 0.5, cy + r * 0.68), fill=(255, 255, 255, 45))
-    # Top-left highlight stack
+    d.ellipse((cx - r * 0.78, cy - r * 0.72, cx + r * 0.78, cy + r * 0.84), fill=(cr, cg, cb, 155))
     hl_x = cx - r * 0.28
     hl_y = cy - r * 0.38
-    for radius_mult, alpha in [(0.50, 25), (0.38, 50), (0.26, 90), (0.16, 160), (0.09, 220)]:
+    for radius_mult, alpha in [(0.50, 30), (0.38, 60), (0.26, 110), (0.16, 180), (0.09, 235)]:
         rr = r * radius_mult
         d.ellipse((hl_x - rr, hl_y - rr, hl_x + rr, hl_y + rr), fill=(255, 255, 255, alpha))
 
 
+def _draw_paper_straw(img, x, y, w, h, color):
+    d = ImageDraw.Draw(img, "RGBA")
+    # White paper base
+    d.rounded_rectangle((x, y, x + w, y + h), radius=int(w * 0.45), fill=(252, 245, 232, 255))
+    # Candy stripes — diagonal mint
+    stripe_h = w * 0.7
+    gap = w * 0.5
+    i = 0
+    while True:
+        ty = y - 4 + i * (stripe_h + gap)
+        if ty > y + h:
+            break
+        pts = [
+            (x, ty),
+            (x + w, ty + w * 0.35),
+            (x + w, ty + w * 0.35 + stripe_h),
+            (x, ty + stripe_h),
+        ]
+        d.polygon(pts, fill=color + (240,))
+        i += 1
+    # Clip stripes to straw shape with a mask
+    mask = Image.new("L", img.size, 0)
+    ImageDraw.Draw(mask).rounded_rectangle((x, y, x + w, y + h), radius=int(w * 0.45), fill=255)
+    # Apply mask in-place by compositing
+    bg = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    bg.paste(img, (0, 0), mask)
+    # Now bg has only the masked content
+    # Overlay it back onto a transparent copy of img minus the straw area
+    inv = Image.new("L", img.size, 255)
+    ImageDraw.Draw(inv).rounded_rectangle((x, y, x + w, y + h), radius=int(w * 0.45), fill=0)
+    outside = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    outside.paste(img, (0, 0), inv)
+    img_new = Image.alpha_composite(outside, bg)
+    # Copy back into img
+    img.paste(img_new, (0, 0))
+    d = ImageDraw.Draw(img, "RGBA")
+    # Subtle top opening shadow
+    d.ellipse((x + w * 0.15, y - 1, x + w * 0.85, y + 5), fill=(180, 150, 120, 220))
+
+
 def main():
-    # 1. Main icon — 512x512 with squircle background
     icon_512 = render_icon(512, with_squircle=True)
     icon_512.save(os.path.join(ASSETS, "icon.png"))
 
-    # 2. Adaptive icon foreground — 432x432, just the test-tube on transparent
-    # Android will scale + crop this; the visible safe-zone is the center 264x264
     fg = Image.new("RGBA", (432, 432), (0, 0, 0, 0))
-    # Render the tube+balls at a smaller scale so it fits in the safe zone
-    inner = render_icon(264, with_squircle=False)
-    fg.paste(inner, ((432 - 264) // 2, (432 - 264) // 2), inner)
+    inner = render_icon(280, with_squircle=False)
+    fg.paste(inner, ((432 - 280) // 2, (432 - 280) // 2), inner)
     fg.save(os.path.join(ASSETS, "icon_foreground.png"))
 
-    # 3. Adaptive icon background — solid dark navy
     bg = Image.new("RGBA", (432, 432), (*BG_BOT, 255))
-    # Add subtle gradient
     bgd = ImageDraw.Draw(bg)
     for y in range(432):
         t = y / 432

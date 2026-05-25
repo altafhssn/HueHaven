@@ -350,14 +350,15 @@ func _draw():
 			Vector2(tube_rect.size.x, tube_rect.size.y)),
 			Color(0.30, 0.20, 0.12, 0.45), false, 1.5)
 
-		# Paper straw poking out top-right of the glass
+		# Paper straw poking out top-right of the glass — longer so it
+		# clearly reads as "drink" from across the screen
 		var straw_tex: Texture2D = AssetsScript.straw_for_pack(_current_pack_index())
 		if straw_tex:
-			var sw: float = tube_width * 0.30
-			var sh: float = tube_height * 0.50
-			# Sit straw with bottom ~halfway down the tube, top poking above the rim
+			var sw: float = tube_width * 0.32
+			var sh: float = tube_height * 0.85
+			# Bottom of straw deep inside the glass; top pokes ~55% above the rim
 			var sx: float = tube_rect.position.x + tube_rect.size.x * 0.50
-			var sy: float = tube_rect.position.y - sh * 0.35
+			var sy: float = tube_rect.position.y - sh * 0.55
 			draw_texture_rect(straw_tex, Rect2(sx, sy, sw, sh), false)
 		
 		# Draw balls in tube (bottom to top).
