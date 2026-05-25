@@ -293,6 +293,16 @@ func _draw():
 		var t_sec: float = Time.get_ticks_msec() / 1000.0
 		StyleScript.draw_themed_background(self, viewport_size, t_sec, _current_theme())
 
+	# Dimmed stage strip behind the row of tubes — gives glass walls the
+	# contrast they need against the busy cafe bg. Spans full width and
+	# the height of the play zone.
+	var stage_pad_y: float = 24.0
+	var stage_rect := Rect2(
+		0, grid_offset.y - stage_pad_y,
+		viewport_size.x, tube_height + stage_pad_y * 2
+	)
+	draw_rect(stage_rect, Color(0.0, 0.05, 0.10, 0.45))
+
 	# Draw each tube
 	for i in range(n_tubes):
 		# Shake offset: oscillates and fades as timer expires
@@ -319,26 +329,30 @@ func _draw():
 		var glass_tex: Texture2D = AssetsScript.glass()
 		if glass_tex:
 			draw_texture_rect(glass_tex, tube_rect, false)
-		# Procedural rim (top) — warm cream band, the defining glass cue
-		var rim_col := Color(0.93, 0.85, 0.65, 0.85)
-		var rim_h: float = max(3.0, tube_rect.size.y * 0.018)
+		# Procedural rim (top) — warm cream band, FULL alpha for visibility
+		var rim_col := Color(0.96, 0.88, 0.70, 1.0)
+		var rim_h: float = max(4.0, tube_rect.size.y * 0.020)
 		draw_rect(Rect2(tube_rect.position + Vector2(2, 0),
 			Vector2(tube_rect.size.x - 4, rim_h)), rim_col)
-		# Inner rim shadow (just below the rim)
+		# Inner rim shadow (just below the rim) — defines the rim edge
 		draw_rect(Rect2(tube_rect.position + Vector2(2, rim_h),
-			Vector2(tube_rect.size.x - 4, 2)), Color(0.0, 0.0, 0.0, 0.20))
-		# Left vertical wall highlight
+			Vector2(tube_rect.size.x - 4, 2)), Color(0.10, 0.05, 0.0, 0.45))
+		# Left vertical wall highlight — brighter, slightly thicker
 		draw_rect(Rect2(tube_rect.position + Vector2(2, rim_h + 4),
-			Vector2(2, tube_rect.size.y - rim_h - 12)),
-			Color(1, 1, 1, 0.28))
-		# Right vertical wall shadow
-		draw_rect(Rect2(tube_rect.position + Vector2(tube_rect.size.x - 4, rim_h + 4),
-			Vector2(2, tube_rect.size.y - rim_h - 12)),
-			Color(0, 0, 0, 0.18))
-		# Glass base — refraction shadow
-		draw_rect(Rect2(tube_rect.position + Vector2(2, tube_rect.size.y - 6),
-			Vector2(tube_rect.size.x - 4, 4)),
-			Color(0.0, 0.0, 0.0, 0.30))
+			Vector2(3, tube_rect.size.y - rim_h - 14)),
+			Color(1, 1, 1, 0.55))
+		# Right vertical wall shadow — stronger
+		draw_rect(Rect2(tube_rect.position + Vector2(tube_rect.size.x - 5, rim_h + 4),
+			Vector2(3, tube_rect.size.y - rim_h - 14)),
+			Color(0, 0, 0, 0.45))
+		# Glass base — stronger refraction shadow
+		draw_rect(Rect2(tube_rect.position + Vector2(2, tube_rect.size.y - 8),
+			Vector2(tube_rect.size.x - 4, 5)),
+			Color(0.0, 0.0, 0.0, 0.55))
+		# Subtle outer border to clearly delimit the glass on busy bg
+		draw_rect(Rect2(tube_rect.position + Vector2(1, 0),
+			Vector2(tube_rect.size.x - 2, tube_rect.size.y)),
+			Color(1, 1, 1, 0.10), false, 1.0)
 
 		# Paper straw poking out top-right of the glass
 		var straw_tex: Texture2D = AssetsScript.straw_for_pack(_current_pack_index())
