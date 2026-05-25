@@ -310,17 +310,35 @@ func _draw():
 				var a := 0.20 / float(k + 1)
 				draw_rounded_rect(grow, Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, a), 18 + k * 4, true)
 
-		# Glass vial sprite — overscale slightly so the cream rim reads clearly.
-		# Glass texture has a tall portrait aspect; preserve it via aspect fit.
+		# Glass tube — layered approach:
+		#   1. Underlying glass texture stretched to tube_rect (provides subtle
+		#      cream rim + base refraction hint).
+		#   2. Procedural cream rim + soft side walls + warm base on top so the
+		#      glass is clearly visible at our narrow 4:1 tube aspect even
+		#      after the texture gets vertically compressed.
 		var glass_tex: Texture2D = AssetsScript.glass()
 		if glass_tex:
-			var glass_rect := tube_rect.grow(2)  # tiny overscale so rim is visible
-			draw_texture_rect(glass_tex, glass_rect, false)
-		else:
-			var glass_top := Color(0.55, 0.78, 0.92, 0.18)
-			var glass_bot := Color(0.30, 0.50, 0.70, 0.10)
-			StyleScript.draw_gradient_rect(self, tube_rect, glass_top, glass_bot, 18.0)
-			draw_rounded_rect(tube_rect, Color(0.50, 0.72, 0.88, 0.55), 18, false, 1.5)
+			draw_texture_rect(glass_tex, tube_rect, false)
+		# Procedural rim (top) — warm cream band, the defining glass cue
+		var rim_col := Color(0.93, 0.85, 0.65, 0.85)
+		var rim_h: float = max(3.0, tube_rect.size.y * 0.018)
+		draw_rect(Rect2(tube_rect.position + Vector2(2, 0),
+			Vector2(tube_rect.size.x - 4, rim_h)), rim_col)
+		# Inner rim shadow (just below the rim)
+		draw_rect(Rect2(tube_rect.position + Vector2(2, rim_h),
+			Vector2(tube_rect.size.x - 4, 2)), Color(0.0, 0.0, 0.0, 0.20))
+		# Left vertical wall highlight
+		draw_rect(Rect2(tube_rect.position + Vector2(2, rim_h + 4),
+			Vector2(2, tube_rect.size.y - rim_h - 12)),
+			Color(1, 1, 1, 0.28))
+		# Right vertical wall shadow
+		draw_rect(Rect2(tube_rect.position + Vector2(tube_rect.size.x - 4, rim_h + 4),
+			Vector2(2, tube_rect.size.y - rim_h - 12)),
+			Color(0, 0, 0, 0.18))
+		# Glass base — refraction shadow
+		draw_rect(Rect2(tube_rect.position + Vector2(2, tube_rect.size.y - 6),
+			Vector2(tube_rect.size.x - 4, 4)),
+			Color(0.0, 0.0, 0.0, 0.30))
 
 		# Paper straw poking out top-right of the glass
 		var straw_tex: Texture2D = AssetsScript.straw_for_pack(_current_pack_index())
