@@ -103,8 +103,9 @@ func _make_pack_tile(pack_idx: int, pack: Dictionary, start_level: int, pos: Vec
 		sb.bg_color = palette[0]
 		sb.border_color = accent
 	else:
-		sb.bg_color = Color(palette[0].r * 0.35, palette[0].g * 0.35, palette[0].b * 0.35, 1.0)
-		sb.border_color = Color(palette[2].r * 0.40, palette[2].g * 0.40, palette[2].b * 0.40, 1.0)
+		# Locked: muted grayish cream (slightly darker than panel) + soft tan border
+		sb.bg_color = Color("#E0D4C0")
+		sb.border_color = Color("#B59B82")
 	sb.set_border_width_all(1)
 	sb.corner_radius_top_left = 18
 	sb.corner_radius_top_right = 18
@@ -200,16 +201,17 @@ func _draw_pack_tile_content(glyph: Control) -> void:
 			pack_name, HORIZONTAL_ALIGNMENT_LEFT, -1, name_size, StyleScript.TEXT_DIM)
 
 func _palette_for_theme(theme: int) -> Array:
-	# Returns [bg, _unused, accent]
+	# Returns [bg, _unused, accent] — cafe boba flavors, light cream tints
+	# so they sit naturally on the cream cafe background.
 	match theme:
 		StyleScript.THEME_ALCHEMY:
-			return [Color("#2a1a14"), Color(), Color("#d97757")]
+			return [Color("#F4E0C0"), Color(), Color("#C68845")]  # brown sugar
 		StyleScript.THEME_SCIFI:
-			return [Color("#181838"), Color(), Color("#5cb0d9")]
+			return [Color("#E8DCEA"), Color(), Color("#9E7CB8")]  # taro
 		StyleScript.THEME_FOREST:
-			return [Color("#0e2820"), Color(), Color("#88d9a0")]
+			return [Color("#DCEAD0"), Color(), Color("#7DA66A")]  # matcha
 		_:
-			return [Color("#0e2840"), Color(), Color("#5cb0d9")]
+			return [Color("#F5E4D2"), Color(), Color("#E89B7A")]  # milk tea (default)
 
 func _hover_style(base: StyleBoxFlat, accent: Color) -> StyleBoxFlat:
 	var sb := base.duplicate()

@@ -11,67 +11,63 @@ static func theme_for_pack(pack_idx: int) -> int:
 	var cycle := [THEME_UNDERWATER, THEME_ALCHEMY, THEME_FOREST, THEME_SCIFI, THEME_ALCHEMY, THEME_FOREST]
 	return cycle[pack_idx % cycle.size()]
 
-# Top-level themed background dispatcher. Uses one clean shared design
-# (gradient + vignette + minimal particles) recolored per theme — no
-# per-theme elaborate geometry that distorts at non-portrait aspects.
+# Top-level themed background dispatcher. All screens use the SAME warm
+# cafe-cream palette; the `theme` parameter only varies the secondary
+# accent glow tint per pack (taro/matcha/milk-tea/etc.) for subtle identity.
 static func draw_themed_background(ci: CanvasItem, viewport: Vector2, t: float, theme: int) -> void:
-	var top: Color
-	var bot: Color
 	var accent: Color
 	match theme:
 		THEME_ALCHEMY:
-			top = Color("#2a1a14"); bot = Color("#0a0604"); accent = Color("#d97757")
+			accent = Color("#E5A640")   # caramel gold
 		THEME_SCIFI:
-			top = Color("#181838"); bot = Color("#04060f"); accent = Color("#5cb0d9")
+			accent = Color("#9E7CB8")   # taro lavender
 		THEME_FOREST:
-			top = Color("#0e2820"); bot = Color("#02080a"); accent = Color("#88d9a0")
+			accent = Color("#7DA66A")   # matcha green
 		_:
-			top = Color("#0e2840"); bot = Color("#040814"); accent = Color("#5cb0d9")
-	_draw_clean_bg(ci, viewport, t, top, bot, accent)
+			accent = Color("#E89B7A")   # boba peach (default / Tide)
+	_draw_clean_bg(ci, viewport, t, accent)
 
-static func _draw_clean_bg(ci: CanvasItem, viewport: Vector2, t: float, top: Color, bot: Color, accent: Color) -> void:
-	# (1) Vertical gradient — uniform, scales naturally to any aspect
+static func _draw_clean_bg(ci: CanvasItem, viewport: Vector2, t: float, accent: Color) -> void:
+	# Warm cafe cream gradient — same on every screen for visual unity
+	var top := Color("#F5EBDA")     # warm cream (paper)
+	var mid := Color("#EDDCC0")     # mid cream
+	var bot := Color("#D8BFA2")     # warm honey wood
 	var bands := 32
 	for i in range(bands):
 		var pos: float = float(i) / float(bands - 1)
-		var col: Color = top.lerp(bot, pos)
+		var col: Color
+		if pos < 0.6:
+			col = top.lerp(mid, pos / 0.6)
+		else:
+			col = mid.lerp(bot, (pos - 0.6) / 0.4)
 		var y: float = viewport.y * float(i) / float(bands)
 		var h: float = viewport.y / float(bands) + 1.0
 		ci.draw_rect(Rect2(Vector2(0, y), Vector2(viewport.x, h)), col)
 
-	# (2) Soft accent glow near the top — drifts very slowly side-to-side
-	var glow_x: float = viewport.x * (0.5 + 0.10 * sin(t * 0.06))
-	var glow_y: float = viewport.y * 0.15
-	var r1: float = viewport.x * 0.85
-	ci.draw_circle(Vector2(glow_x, glow_y), r1, Color(accent.r, accent.g, accent.b, 0.04))
-	ci.draw_circle(Vector2(glow_x, glow_y), r1 * 0.65, Color(accent.r, accent.g, accent.b, 0.05))
-	ci.draw_circle(Vector2(glow_x, glow_y), r1 * 0.35, Color(accent.r, accent.g, accent.b, 0.06))
+	# Soft per-theme accent wash near the top — drifts very slowly
+	var glow_x: float = viewport.x * (0.5 + 0.08 * sin(t * 0.05))
+	var glow_y: float = viewport.y * 0.18
+	var r1: float = viewport.x * 0.80
+	ci.draw_circle(Vector2(glow_x, glow_y), r1, Color(accent.r, accent.g, accent.b, 0.08))
+	ci.draw_circle(Vector2(glow_x, glow_y), r1 * 0.65, Color(accent.r, accent.g, accent.b, 0.10))
+	ci.draw_circle(Vector2(glow_x, glow_y), r1 * 0.35, Color(accent.r, accent.g, accent.b, 0.12))
 
-	# (3) Radial vignette — darken edges slightly so focus is centered
-	var corner_dark := Color(0, 0, 0, 0.25)
-	for k in range(6):
-		var grow := float(k * 30)
-		var rect := Rect2(-grow, -grow, viewport.x + grow * 2, viewport.y + grow * 2)
-		var alpha := (float(k) + 1.0) / 30.0
-		# Top + bottom edge darkening
-		ci.draw_rect(Rect2(0, viewport.y - 80 - grow * 2, viewport.x, 30), Color(0, 0, 0, alpha))
-		ci.draw_rect(Rect2(0, grow * 2, viewport.x, 20), Color(0, 0, 0, alpha * 0.5))
-
-	# (4) Minimal drifting particles (12 of them) — neutral dots
+	# Subtle warm-brown particles floating up — like steam motes from a cafe
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 7
-	for i in range(12):
+	for i in range(14):
 		var base_x: float = rng.randf() * viewport.x
 		var seed_y: float = rng.randf() * viewport.y
-		var radius: float = rng.randf_range(1.0, 2.4)
+		var radius: float = rng.randf_range(1.2, 2.6)
 		var speed: float = rng.randf_range(6.0, 14.0)
 		var sway: float = rng.randf_range(10.0, 22.0)
 		var phase: float = rng.randf() * TAU
 		var y_pos: float = fposmod(seed_y - t * speed, viewport.y + 30.0) - 15.0
 		var x_pos: float = base_x + sin(t * 0.3 + phase) * sway
-		var alpha: float = 0.12 + 0.10 * sin(t * 0.4 + phase)
-		ci.draw_circle(Vector2(x_pos, y_pos), radius * 1.8, Color(accent.r, accent.g, accent.b, alpha * 0.25))
-		ci.draw_circle(Vector2(x_pos, y_pos), radius, Color(0.95, 0.95, 1.0, alpha))
+		var alpha: float = 0.20 + 0.12 * sin(t * 0.4 + phase)
+		# Warm honey dot
+		ci.draw_circle(Vector2(x_pos, y_pos), radius * 1.6, Color(0.55, 0.40, 0.25, alpha * 0.18))
+		ci.draw_circle(Vector2(x_pos, y_pos), radius, Color(0.85, 0.65, 0.45, alpha * 0.60))
 
 # --- Background: underwater (deep teal → abyss) ---
 const BG_TOP := Color("#0F3954")
