@@ -293,15 +293,14 @@ func _draw():
 		var t_sec: float = Time.get_ticks_msec() / 1000.0
 		StyleScript.draw_themed_background(self, viewport_size, t_sec, _current_theme())
 
-	# Dimmed stage strip behind the row of tubes — gives glass walls the
-	# contrast they need against the busy cafe bg. Spans full width and
-	# the height of the play zone.
-	var stage_pad_y: float = 24.0
+	# Soft cream stage strip behind the row of tubes — matches the cafe
+	# theme and gives glass walls subtle contrast without dominating.
+	var stage_pad_y: float = 20.0
 	var stage_rect := Rect2(
 		0, grid_offset.y - stage_pad_y,
 		viewport_size.x, tube_height + stage_pad_y * 2
 	)
-	draw_rect(stage_rect, Color(0.0, 0.05, 0.10, 0.45))
+	draw_rect(stage_rect, Color(0.20, 0.13, 0.08, 0.20))
 
 	# Draw each tube
 	for i in range(n_tubes):
@@ -320,39 +319,41 @@ func _draw():
 				var a := 0.20 / float(k + 1)
 				draw_rounded_rect(grow, Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, a), 18 + k * 4, true)
 
-		# Glass tube — layered approach:
-		#   1. Underlying glass texture stretched to tube_rect (provides subtle
-		#      cream rim + base refraction hint).
-		#   2. Procedural cream rim + soft side walls + warm base on top so the
-		#      glass is clearly visible at our narrow 4:1 tube aspect even
-		#      after the texture gets vertically compressed.
+		# Glass tube — layered for clarity against the blurred cafe bg:
+		#   1. Translucent warm-cream body fill — always reads as "container"
+		#   2. Underlying glass texture for warm tint depth
+		#   3. Procedural rim + walls + base + border for definition
+		# Body fill — translucent warm cream so the glass shape is always visible
+		var body_top := Color(0.96, 0.92, 0.85, 0.22)
+		var body_bot := Color(0.85, 0.78, 0.68, 0.18)
+		StyleScript.draw_gradient_rect(self, tube_rect, body_top, body_bot, 8.0)
 		var glass_tex: Texture2D = AssetsScript.glass()
 		if glass_tex:
 			draw_texture_rect(glass_tex, tube_rect, false)
-		# Procedural rim (top) — warm cream band, FULL alpha for visibility
+		# Procedural rim (top) — warm cream band, FULL alpha
 		var rim_col := Color(0.96, 0.88, 0.70, 1.0)
-		var rim_h: float = max(4.0, tube_rect.size.y * 0.020)
+		var rim_h: float = max(4.0, tube_rect.size.y * 0.022)
 		draw_rect(Rect2(tube_rect.position + Vector2(2, 0),
 			Vector2(tube_rect.size.x - 4, rim_h)), rim_col)
-		# Inner rim shadow (just below the rim) — defines the rim edge
+		# Inner rim shadow
 		draw_rect(Rect2(tube_rect.position + Vector2(2, rim_h),
-			Vector2(tube_rect.size.x - 4, 2)), Color(0.10, 0.05, 0.0, 0.45))
-		# Left vertical wall highlight — brighter, slightly thicker
+			Vector2(tube_rect.size.x - 4, 2)), Color(0.20, 0.10, 0.0, 0.55))
+		# Left wall highlight
 		draw_rect(Rect2(tube_rect.position + Vector2(2, rim_h + 4),
 			Vector2(3, tube_rect.size.y - rim_h - 14)),
-			Color(1, 1, 1, 0.55))
-		# Right vertical wall shadow — stronger
+			Color(1, 1, 1, 0.65))
+		# Right wall shadow
 		draw_rect(Rect2(tube_rect.position + Vector2(tube_rect.size.x - 5, rim_h + 4),
 			Vector2(3, tube_rect.size.y - rim_h - 14)),
-			Color(0, 0, 0, 0.45))
-		# Glass base — stronger refraction shadow
+			Color(0.20, 0.10, 0.0, 0.45))
+		# Base refraction shadow
 		draw_rect(Rect2(tube_rect.position + Vector2(2, tube_rect.size.y - 8),
 			Vector2(tube_rect.size.x - 4, 5)),
-			Color(0.0, 0.0, 0.0, 0.55))
-		# Subtle outer border to clearly delimit the glass on busy bg
-		draw_rect(Rect2(tube_rect.position + Vector2(1, 0),
-			Vector2(tube_rect.size.x - 2, tube_rect.size.y)),
-			Color(1, 1, 1, 0.10), false, 1.0)
+			Color(0.20, 0.10, 0.0, 0.65))
+		# Walnut outer border to delimit the glass clearly
+		draw_rect(Rect2(tube_rect.position,
+			Vector2(tube_rect.size.x, tube_rect.size.y)),
+			Color(0.30, 0.20, 0.12, 0.45), false, 1.5)
 
 		# Paper straw poking out top-right of the glass
 		var straw_tex: Texture2D = AssetsScript.straw_for_pack(_current_pack_index())

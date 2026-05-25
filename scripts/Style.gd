@@ -79,31 +79,31 @@ const BG_MID := Color("#0A2A40")
 const BG_BOTTOM := Color("#040E1A")
 const BG_SOLID := Color("#0A2A40")
 
-# --- Panels & cards (dark teal panels) ---
-const PANEL := Color("#0E2A40")
-const PANEL_HI := Color("#143A55")
-const PANEL_BORDER := Color("#1E4866")
-const PANEL_BORDER_HI := Color("#3A6890")
+# --- Panels & cards (cafe cream + wood tones) ---
+const PANEL := Color("#F5EBDA")            # warm cream paper
+const PANEL_HI := Color("#FAF1E0")         # lighter cream on hover
+const PANEL_BORDER := Color("#8A6E4F")     # walnut wood
+const PANEL_BORDER_HI := Color("#A98870")  # lighter wood
 
-# --- Accent (warm orange for primary actions — pops on teal) ---
-const ACCENT := Color("#FF8C5A")
-const ACCENT_HI := Color("#FFA070")
-const ACCENT_DIM := Color("#D9683A")
-const ACCENT_GLOW := Color("#FF8C5A", 0.30)
+# --- Accent (boba peach for primary actions) ---
+const ACCENT := Color("#E89B7A")           # warm peach (boba theme)
+const ACCENT_HI := Color("#F0B095")
+const ACCENT_DIM := Color("#C77A5C")
+const ACCENT_GLOW := Color("#E89B7A", 0.30)
 
-# --- Text (cool soft white) ---
-const TEXT := Color("#E8F2F8")
-const TEXT_MUTED := Color("#8AA8BE")
-const TEXT_DIM := Color("#4A6478")
+# --- Text (warm dark brown on cream) ---
+const TEXT := Color("#3D2A1A")             # espresso brown
+const TEXT_MUTED := Color("#7A5F46")       # mocha
+const TEXT_DIM := Color("#B59B82")         # soft tan
 
 # --- Semantic ---
-const STAR := Color("#FFD060")
-const DANGER := Color("#FF6A5A")
-const SUCCESS := Color("#7AD89A")
+const STAR := Color("#E5A640")             # caramel gold
+const DANGER := Color("#C5604D")           # muted red — sits on cream nicely
+const SUCCESS := Color("#7DA66A")          # matcha green
 
 # --- Tubes (glass vials) ---
-const TUBE_BG := Color("#0A2236")
-const TUBE_BG_HI := Color("#143A55")
+const TUBE_BG := Color("#F5EBDA")
+const TUBE_BG_HI := Color("#FAF1E0")
 const TUBE_BORDER := Color("#3A6890")
 const TUBE_INNER_SHADOW := Color("#000000", 0.40)
 
