@@ -310,25 +310,26 @@ func _draw():
 				var a := 0.20 / float(k + 1)
 				draw_rounded_rect(grow, Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, a), 18 + k * 4, true)
 
-		# Glass vial sprite (replaces procedural draw)
+		# Glass vial sprite — overscale slightly so the cream rim reads clearly.
+		# Glass texture has a tall portrait aspect; preserve it via aspect fit.
 		var glass_tex: Texture2D = AssetsScript.glass()
 		if glass_tex:
-			draw_texture_rect(glass_tex, tube_rect, false)
+			var glass_rect := tube_rect.grow(2)  # tiny overscale so rim is visible
+			draw_texture_rect(glass_tex, glass_rect, false)
 		else:
-			# Fallback procedural look
 			var glass_top := Color(0.55, 0.78, 0.92, 0.18)
 			var glass_bot := Color(0.30, 0.50, 0.70, 0.10)
 			StyleScript.draw_gradient_rect(self, tube_rect, glass_top, glass_bot, 18.0)
 			draw_rounded_rect(tube_rect, Color(0.50, 0.72, 0.88, 0.55), 18, false, 1.5)
 
-		# Paper straw sticking out the top of the glass (per-pack color)
+		# Paper straw poking out top-right of the glass
 		var straw_tex: Texture2D = AssetsScript.straw_for_pack(_current_pack_index())
 		if straw_tex:
-			var sw: float = tube_width * 0.22
-			var sh: float = tube_height * 0.55
-			# Anchor at top-right of glass with a slight tilt
-			var sx: float = tube_rect.position.x + tube_rect.size.x * 0.55
-			var sy: float = tube_rect.position.y - sh * 0.55
+			var sw: float = tube_width * 0.30
+			var sh: float = tube_height * 0.50
+			# Sit straw with bottom ~halfway down the tube, top poking above the rim
+			var sx: float = tube_rect.position.x + tube_rect.size.x * 0.50
+			var sy: float = tube_rect.position.y - sh * 0.35
 			draw_texture_rect(straw_tex, Rect2(sx, sy, sw, sh), false)
 		
 		# Draw balls in tube (bottom to top).
@@ -454,8 +455,10 @@ func _draw_ball(center: Vector2, ball_entry):
 		_draw_ball_procedural(center, ball_entry)
 		return
 
-	# Sprite-based pearl: square the radius into a rect and blit
-	var d: float = ball_radius * 2.2  # slight overscale so glassy edge isn't cropped tight
+	# Sprite-based pearl: size matched to procedural ball radius, sized to
+	# comfortably fit inside the tube (1.85× radius = slightly smaller than
+	# 2× full diameter so adjacent pearls don't overlap)
+	var d: float = ball_radius * 1.85
 	var rect := Rect2(center.x - d * 0.5, center.y - d * 0.5, d, d)
 	draw_texture_rect(tex, rect, false)
 
