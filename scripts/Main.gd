@@ -319,17 +319,12 @@ func _draw():
 				var a := 0.20 / float(k + 1)
 				draw_rounded_rect(grow, Color(StyleScript.ACCENT.r, StyleScript.ACCENT.g, StyleScript.ACCENT.b, a), 18 + k * 4, true)
 
-		# Glass tube — layered for clarity against the blurred cafe bg:
-		#   1. Translucent warm-cream body fill — always reads as "container"
-		#   2. Underlying glass texture for warm tint depth
-		#   3. Procedural rim + walls + base + border for definition
-		# Body fill — translucent warm cream so the glass shape is always visible
+		# Glass tube — fully procedural now. The texture was bringing pink
+		# chroma-key fringe artifacts on the edges; the procedural draw is
+		# cleaner and reads as glass at any size/aspect.
 		var body_top := Color(0.96, 0.92, 0.85, 0.22)
 		var body_bot := Color(0.85, 0.78, 0.68, 0.18)
 		StyleScript.draw_gradient_rect(self, tube_rect, body_top, body_bot, 8.0)
-		var glass_tex: Texture2D = AssetsScript.glass()
-		if glass_tex:
-			draw_texture_rect(glass_tex, tube_rect, false)
 		# Procedural rim (top) — warm cream band, FULL alpha
 		var rim_col := Color(0.96, 0.88, 0.70, 1.0)
 		var rim_h: float = max(4.0, tube_rect.size.y * 0.022)

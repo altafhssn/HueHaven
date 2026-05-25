@@ -108,10 +108,10 @@ const TUBE_BORDER := Color("#3A6890")
 const TUBE_INNER_SHADOW := Color("#000000", 0.40)
 
 # --- Buttons ---
-const BTN_BG := Color("#0E2A40")
-const BTN_BG_HOVER := Color("#163B55")
-const BTN_BG_PRESSED := Color("#06182A")
-const BTN_BORDER := Color("#2A5070")
+const BTN_BG := Color("#F5EBDA")           # warm cream pill
+const BTN_BG_HOVER := Color("#FAF1E0")     # lighter cream
+const BTN_BG_PRESSED := Color("#E5D7BD")   # pressed cream
+const BTN_BORDER := Color("#8A6E4F")       # walnut wood border
 
 static func make_button_style(bg: Color, border: Color, radius := 24) -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()
